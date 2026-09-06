@@ -33,8 +33,8 @@
         <div class="bg-blob blob-3"></div>
     </div>
 
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="toast-container"></div>
+    <!-- Toast Notification Container (Floating Top-Right) -->
+    <div id="toastContainer" class="toast-container" style="position: fixed; top: 24px; right: 24px; z-index: 99999999; display: flex; flex-direction: column; gap: 12px; pointer-events: none;"></div>
 
     <!-- Main Content -->
     @yield('content')
@@ -49,24 +49,34 @@
         });
 
         // Global Toast Notification Helper
-        window.showToast = function(message, type = 'success') {
+        window.showToast = function(message, type = 'success', title = null) {
             const container = document.getElementById('toastContainer');
             if (!container) return;
             const toast = document.createElement('div');
             toast.className = `toast-item ${type}`;
-            const icon = type === 'success' ? 'check-circle' : 'alert-triangle';
+            const icon = type === 'success' ? 'check-circle-2' : (type === 'error' ? 'alert-octagon' : 'info');
+            const defaultTitle = type === 'success' ? 'Berhasil' : (type === 'error' ? 'Peringatan / Gagal' : 'Informasi');
+            const displayTitle = title || defaultTitle;
+            
             toast.innerHTML = `
-                <i data-lucide="${icon}" style="width: 18px; height: 18px; color: ${type === 'success' ? '#10b981' : '#f43f5e'}"></i>
-                <span>${message}</span>
+                <div class="toast-content">
+                    <i data-lucide="${icon}" style="width: 22px; height: 22px; flex-shrink: 0; color: ${type === 'success' ? '#10b981' : (type === 'error' ? '#f43f5e' : '#00f0ff')};"></i>
+                    <div>
+                        <div style="font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; font-weight: 700;">${displayTitle}</div>
+                        <div style="font-size: 0.88rem; font-weight: 500; color: #ffffff; margin-top: 2px;">${message}</div>
+                    </div>
+                </div>
+                <button class="toast-close-btn" onclick="this.parentElement.remove()" title="Tutup">
+                    <i data-lucide="x" style="width: 15px; height: 15px;"></i>
+                </button>
             `;
             container.appendChild(toast);
             if (window.lucide) window.lucide.createIcons({ root: toast });
             setTimeout(() => {
                 toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.3s ease';
+                toast.style.transform = 'translateX(60px) scale(0.9)';
                 setTimeout(() => toast.remove(), 300);
-            }, 3500);
+            }, 4500);
         };
 
         // Theme Toggle (Dark / Light)

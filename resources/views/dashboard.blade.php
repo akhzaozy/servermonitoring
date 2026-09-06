@@ -520,6 +520,9 @@
         </div>
 
         <div class="modal-body">
+            <!-- Alert Banner inside Modal -->
+            <div id="modalBackupAlertBanner" style="display: none;" class="modal-alert-banner"></div>
+
             <!-- Status Overview Box -->
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
                 <div style="background: var(--bg-card-subtle); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
@@ -1013,8 +1016,23 @@
 
         const btn = document.getElementById('btnTriggerManualBackup');
         const btnText = document.getElementById('backupBtnText');
+        const alertBanner = document.getElementById('modalBackupAlertBanner');
+
         if (btn) btn.disabled = true;
         if (btnText) btnText.textContent = 'Memulai Backup...';
+
+        if (alertBanner) {
+            alertBanner.className = 'modal-alert-banner running';
+            alertBanner.style.display = 'flex';
+            alertBanner.innerHTML = `
+                <i data-lucide="loader-2" class="animate-spin" style="width: 20px; height: 20px; color: var(--neon-cyan); flex-shrink: 0;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: #ffffff;">Proses Backup Sedang Berjalan...</div>
+                    <div style="font-size: 0.8rem; opacity: 0.85; margin-top: 2px;">Script /www/backup/backup.php sedang mencadangkan hosting & database. Mohon tunggu...</div>
+                </div>
+            `;
+            if (window.lucide) window.lucide.createIcons({ root: alertBanner });
+        }
 
         try {
             const res = await fetch('/api/monitoring/backup/run', {
@@ -1027,7 +1045,7 @@
             const data = await res.json();
 
             if (data.success) {
-                window.showToast(data.message, 'success');
+                window.showToast(data.message, 'info', 'Backup Dimulai');
                 fetchBackupStatus();
                 fetchBackupLogs();
 
@@ -1040,16 +1058,57 @@
                     if (!statusData.is_running) {
                         clearInterval(backupPollingTimer);
                         fetchBackupStatus();
-                        window.showToast('Proses backup selesai!', 'success');
+                        
+                        if (alertBanner) {
+                            alertBanner.className = 'modal-alert-banner success';
+                            alertBanner.style.display = 'flex';
+                            alertBanner.innerHTML = `
+                                <i data-lucide="check-circle-2" style="width: 22px; height: 22px; color: #10b981; flex-shrink: 0;"></i>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 700; color: #ffffff;">Proses Backup Selesai!</div>
+                                    <div style="font-size: 0.8rem; opacity: 0.9; margin-top: 2px;">File snapshot incremental dan dump database MariaDB/PostgreSQL telah berhasil diperbarui.</div>
+                                </div>
+                                <button onclick="this.parentElement.style.display='none'" class="toast-close-btn" style="color: rgba(255,255,255,0.7);" title="Tutup">
+                                    <i data-lucide="x" style="width: 15px; height: 15px;"></i>
+                                </button>
+                            `;
+                            if (window.lucide) window.lucide.createIcons({ root: alertBanner });
+                        }
+
+                        window.showToast('Proses backup selesai! File snapshot dan dump database telah diperbarui.', 'success', 'Backup Selesai');
                     }
                 }, 3000);
             } else {
-                window.showToast(data.message, 'error');
+                if (alertBanner) {
+                    alertBanner.className = 'modal-alert-banner error';
+                    alertBanner.style.display = 'flex';
+                    alertBanner.innerHTML = `
+                        <i data-lucide="alert-octagon" style="width: 20px; height: 20px; color: #f43f5e; flex-shrink: 0;"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; color: #ffffff;">Gagal Menjalankan Backup</div>
+                            <div style="font-size: 0.8rem; margin-top: 2px;">${data.message}</div>
+                        </div>
+                    `;
+                    if (window.lucide) window.lucide.createIcons({ root: alertBanner });
+                }
+                window.showToast(data.message, 'error', 'Backup Gagal');
                 if (btn) btn.disabled = false;
                 if (btnText) btnText.textContent = 'Mulai Backup Sekarang';
             }
         } catch (e) {
-            window.showToast('Gagal memicu backup: ' + e.message, 'error');
+            if (alertBanner) {
+                alertBanner.className = 'modal-alert-banner error';
+                alertBanner.style.display = 'flex';
+                alertBanner.innerHTML = `
+                    <i data-lucide="alert-octagon" style="width: 20px; height: 20px; color: #f43f5e; flex-shrink: 0;"></i>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; color: #ffffff;">Terjadi Kesalahan</div>
+                        <div style="font-size: 0.8rem; margin-top: 2px;">${e.message}</div>
+                    </div>
+                `;
+                if (window.lucide) window.lucide.createIcons({ root: alertBanner });
+            }
+            window.showToast('Gagal memicu backup: ' + e.message, 'error', 'Error');
             if (btn) btn.disabled = false;
             if (btnText) btnText.textContent = 'Mulai Backup Sekarang';
         }
