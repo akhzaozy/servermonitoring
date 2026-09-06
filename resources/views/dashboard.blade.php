@@ -453,7 +453,43 @@
                         <span class="font-mono" style="font-size: 0.76rem; color: var(--text-muted);">Port 80/443</span>
                     </div>
                 </div>
+    <!-- =========================================================================
+         SECTION 5: STATUS WEB AKTIF & UPTIME MONITOR (INTERACTIVE CARDS GRID)
+         ========================================================================= -->
+    <div class="sites-section animate-entrance">
+        <div class="sites-header-bar">
+            <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="card-title" style="font-size: 1.25rem;">Status Web Aktif & Uptime Monitor</div>
+                    <span class="kpi-badge badge-cyan" id="totalSitesCount">{{ count($sites) }} Web Dipantau</span>
+                </div>
+                <div class="card-subtitle">Pemantauan status online/offline, latency response time, SSL, dan riwayat uptime 24 jam</div>
             </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div class="sites-tabs">
+                    <button class="tab-btn active" onclick="setSiteFilter('all', this)">Semua (<span id="countFilterAll">{{ count($sites) }}</span>)</button>
+                    <button class="tab-btn" onclick="setSiteFilter('online', this)">Online</button>
+                    <button class="tab-btn" onclick="setSiteFilter('offline', this)">Offline</button>
+                    <button class="tab-btn" onclick="setSiteFilter('laravel', this)">Laravel</button>
+                    <button class="tab-btn" onclick="setSiteFilter('nextjs', this)">Next.js</button>
+                    <button class="tab-btn" onclick="setSiteFilter('native_php', this)">PHP Native</button>
+                </div>
+
+                <button class="btn btn-emerald" onclick="checkAllWebsites()">
+                    <i data-lucide="refresh-cw" id="checkAllWebBtnIcon" style="width: 15px; height: 15px;"></i>
+                    <span>Cek Semua Web</span>
+                </button>
+                <button class="btn btn-neon-purple" onclick="openAddSiteModal()">
+                    <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i>
+                    <span>Tambah Web</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Site Cards Container -->
+        <div class="sites-grid" id="sitesContainer">
+            <!-- Rendered dynamically by renderSitesGrid() -->
         </div>
     </div>
 
@@ -666,40 +702,43 @@
 <div id="addSiteModal" class="modal-backdrop">
     <div class="modal-window" style="max-width: 520px;">
         <div class="modal-header">
-            <div class="card-title">Tambah Website / Layanan Baru</div>
+            <div class="card-title" id="siteModalTitle">Tambah Website / Layanan Baru</div>
             <button class="btn btn-icon" onclick="closeAddSiteModal()">
                 <i data-lucide="x" style="width: 18px; height: 18px;"></i>
             </button>
         </div>
         <form id="addSiteForm" onsubmit="submitAddSite(event)">
+            <input type="hidden" id="siteFormId" name="id" value="">
             <div class="modal-body">
                 <div>
                     <label style="font-size: 0.84rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Nama Website / Layanan</label>
-                    <input type="text" name="name" required placeholder="Contoh: Portal Mahasiswa" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
+                    <input type="text" id="siteFormName" name="name" required placeholder="Contoh: Portal Mahasiswa" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
                 </div>
                 <div>
                     <label style="font-size: 0.84rem; color: var(--text-muted); display: block; margin-bottom: 6px;">URL Website</label>
-                    <input type="url" name="url" required placeholder="https://app.contoh.com" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
+                    <input type="url" id="siteFormUrl" name="url" required placeholder="https://app.contoh.com" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div>
                         <label style="font-size: 0.84rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Stack Layanan</label>
-                        <select name="stack_type" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
+                        <select id="siteFormStack" name="stack_type" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
                             <option value="laravel">PHP / Laravel</option>
                             <option value="nodejs">Node.js / Express</option>
+                            <option value="nextjs">Next.js</option>
+                            <option value="native_php">PHP Native</option>
                             <option value="static">HTML / Statis</option>
                             <option value="other">Layanan Lainnya</option>
                         </select>
                     </div>
                     <div>
                         <label style="font-size: 0.84rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Port</label>
-                        <input type="number" name="port" value="80" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
+                        <input type="number" id="siteFormPort" name="port" value="80" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; color: #fff; font-family: inherit; outline: none;">
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" style="background: var(--bg-input); border-color: var(--border-subtle); color: var(--text-main);" onclick="closeAddSiteModal()">Batal</button>
-                <button type="submit" class="btn btn-neon-purple">Simpan Layanan</button>
+                <button type="submit" class="btn btn-neon-purple" id="siteFormSubmitBtn">Simpan Layanan</button>
             </div>
         </form>
     </div>
@@ -1050,7 +1089,253 @@
         }
     }
 
+    // =========================================================================
+    // MONITORED WEBSITES (SITES GRID, CRUD & CHECKS)
+    // =========================================================================
+    let currentSiteFilter = 'all';
+    let currentSearchKeyword = '';
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function setSiteFilter(filter, btn) {
+        currentSiteFilter = filter;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderSitesGrid(initialSites);
+    }
+
+    function filterSearch(keyword) {
+        currentSearchKeyword = (keyword || '').toLowerCase().trim();
+        renderSitesGrid(initialSites);
+    }
+
+    function applyStackFilter(stack) {
+        currentSiteFilter = stack;
+        renderSitesGrid(initialSites);
+    }
+
+    function renderSitesGrid(sitesToRender) {
+        const container = document.getElementById('sitesContainer');
+        if (!container) return;
+
+        // Update counts
+        const totalCountEl = document.getElementById('totalSitesCount');
+        const countAllEl = document.getElementById('countFilterAll');
+        if (totalCountEl) totalCountEl.textContent = `${sitesToRender.length} Web Dipantau`;
+        if (countAllEl) countAllEl.textContent = sitesToRender.length;
+
+        const filtered = sitesToRender.filter(site => {
+            // Filter category
+            if (currentSiteFilter === 'online' && !site.is_online) return false;
+            if (currentSiteFilter === 'offline' && site.is_online) return false;
+            if (currentSiteFilter === 'laravel' && site.stack_type !== 'laravel') return false;
+            if (currentSiteFilter === 'nextjs' && site.stack_type !== 'nextjs') return false;
+            if (currentSiteFilter === 'native_php' && site.stack_type !== 'native_php') return false;
+
+            // Search query
+            if (currentSearchKeyword) {
+                const matchName = (site.name || '').toLowerCase().includes(currentSearchKeyword);
+                const matchUrl = (site.url || '').toLowerCase().includes(currentSearchKeyword);
+                const matchPort = site.port && site.port.toString().includes(currentSearchKeyword);
+                if (!matchName && !matchUrl && !matchPort) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);">
+                    <i data-lucide="globe" style="width: 42px; height: 42px; color: var(--neon-cyan); margin-bottom: 12px; opacity: 0.8;"></i>
+                    <h3 style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 6px;">Tidak ada website yang cocok</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Belum ada website yang terdaftar atau tidak cocok dengan filter aktif.</p>
+                    <button class="btn btn-neon-purple" onclick="openAddSiteModal()">
+                        <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i>
+                        <span>Tambah Website Baru</span>
+                    </button>
+                </div>
+            `;
+            if (window.lucide) window.lucide.createIcons();
+            return;
+        }
+
+        let html = '';
+        filtered.forEach(site => {
+            const isOnline = site.is_online;
+            const statusClass = isOnline ? 'online' : 'offline';
+            const statusText = isOnline ? 'ONLINE' : 'OFFLINE';
+
+            let stackClass = 'stack-other';
+            let stackLabel = 'Custom Web';
+            let stackIcon = '🌐';
+
+            if (site.stack_type === 'nextjs') {
+                stackClass = 'stack-nextjs';
+                stackLabel = 'Next.js';
+                stackIcon = '⚡';
+            } else if (site.stack_type === 'laravel') {
+                stackClass = 'stack-laravel';
+                stackLabel = 'Laravel';
+                stackIcon = '🔴';
+            } else if (site.stack_type === 'native_php') {
+                stackClass = 'stack-native_php';
+                stackLabel = 'PHP Native';
+                stackIcon = '🐘';
+            }
+
+            let latencyClass = 'fast';
+            const ms = site.last_response_time_ms || 0;
+            if (!isOnline) latencyClass = 'error';
+            else if (ms > 500) latencyClass = 'slow';
+            else if (ms > 150) latencyClass = 'normal';
+
+            let historyBarsHtml = '';
+            const bars = site.history_bars || [];
+            for (let i = 0; i < 24; i++) {
+                const bar = bars[i];
+                if (bar) {
+                    const cls = bar.online ? 'up' : 'down';
+                    historyBarsHtml += `<div class="uptime-bar-segment ${cls}" title="${bar.time} • HTTP ${bar.status_code || 'Err'} • ${bar.ms}ms"></div>`;
+                } else {
+                    historyBarsHtml += `<div class="uptime-bar-segment empty" title="Belum ada data"></div>`;
+                }
+            }
+
+            html += `
+                <div class="site-card" id="site-card-${site.id}">
+                    <div class="site-card-top">
+                        <div class="site-meta">
+                            <div class="stack-icon-wrapper ${stackClass}">
+                                ${stackIcon}
+                            </div>
+                            <div class="site-title-area">
+                                <div class="site-title" title="${escapeHtml(site.name)}">
+                                    ${escapeHtml(site.name)}
+                                </div>
+                                <a href="${escapeHtml(site.url)}" target="_blank" class="site-url-link font-mono">
+                                    <span>${escapeHtml(site.url)}</span>
+                                    <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="site-badges-group">
+                            <span class="status-pill ${statusClass}">
+                                <span class="status-dot"></span>
+                                <span>${statusText}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="site-metrics-row">
+                        <div class="site-metric-cell">
+                            <span class="site-metric-val font-mono ${isOnline ? 'fast' : 'error'}">
+                                ${site.last_status_code ? 'HTTP ' + site.last_status_code : 'N/A'}
+                            </span>
+                            <span class="site-metric-lbl">Status Code</span>
+                        </div>
+                        <div class="site-metric-cell">
+                            <span class="site-metric-val font-mono ${latencyClass}">
+                                ${isOnline ? ms + ' ms' : 'Offline'}
+                            </span>
+                            <span class="site-metric-lbl">Latency Ping</span>
+                        </div>
+                        <div class="site-metric-cell">
+                            <span class="site-metric-val font-mono" style="color: var(--neon-cyan);">
+                                ${stackLabel}
+                            </span>
+                            <span class="site-metric-lbl">Port ${site.port || 80}</span>
+                        </div>
+                    </div>
+
+                    <div class="uptime-history-wrap">
+                        <div class="uptime-header">
+                            <span>Riwayat Uptime (24 Jam)</span>
+                            <span class="font-mono" style="font-weight: 700; color: #10b981;">${site.uptime_percentage}%</span>
+                        </div>
+                        <div class="uptime-bars">
+                            ${historyBarsHtml}
+                        </div>
+                    </div>
+
+                    <div class="site-card-footer">
+                        <span class="font-mono" style="font-size: 0.72rem; color: var(--text-muted);">
+                            <i data-lucide="clock" style="width: 11px; height: 11px; display: inline;"></i> ${site.last_checked_at}
+                        </span>
+                        <div class="site-actions-row">
+                            <button class="btn btn-icon" style="width: 32px; height: 32px;" onclick="checkSingleSite(${site.id})" title="Cek Sekarang">
+                                <i data-lucide="refresh-cw" id="checkIcon-${site.id}" style="width: 13px; height: 13px; color: var(--neon-cyan);"></i>
+                            </button>
+                            <button class="btn btn-icon" style="width: 32px; height: 32px;" onclick="openEditSiteModal(${site.id})" title="Edit Web">
+                                <i data-lucide="edit-3" style="width: 13px; height: 13px; color: #c084fc;"></i>
+                            </button>
+                            <button class="btn btn-icon" style="width: 32px; height: 32px; color: #f43f5e;" onclick="deleteSite(${site.id})" title="Hapus Web">
+                                <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    async function checkSingleSite(id) {
+        const icon = document.getElementById(`checkIcon-${id}`);
+        if (icon) icon.classList.add('animate-spin');
+
+        try {
+            const res = await fetch(`/api/monitoring/sites/${id}/check`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+            });
+            const data = await res.json();
+            
+            // Update local site in array
+            const idx = initialSites.findIndex(s => s.id === id);
+            if (idx !== -1) {
+                initialSites[idx] = { ...initialSites[idx], ...data.site, is_online: data.online, last_response_time_ms: data.response_time_ms, last_status_code: data.status_code, last_checked_at: 'Baru saja' };
+            }
+            renderSitesGrid(initialSites);
+            window.showToast(`Pemeriksaan selesai: ${data.online ? 'Online' : 'Offline'} (${data.response_time_ms}ms)`, data.online ? 'success' : 'error');
+        } catch (e) {
+            window.showToast('Gagal memeriksa situs: ' + e.message, 'error');
+        } finally {
+            if (icon) icon.classList.remove('animate-spin');
+        }
+    }
+
     function openAddSiteModal() {
+        document.getElementById('siteModalTitle').textContent = 'Tambah Website / Layanan Baru';
+        document.getElementById('siteFormId').value = '';
+        document.getElementById('siteFormName').value = '';
+        document.getElementById('siteFormUrl').value = '';
+        document.getElementById('siteFormStack').value = 'laravel';
+        document.getElementById('siteFormPort').value = '80';
+        document.getElementById('siteFormSubmitBtn').textContent = 'Simpan Layanan';
+        document.getElementById('addSiteModal').classList.add('active');
+    }
+
+    function openEditSiteModal(id) {
+        const site = initialSites.find(s => s.id === id);
+        if (!site) return;
+
+        document.getElementById('siteModalTitle').textContent = 'Edit Website / Layanan';
+        document.getElementById('siteFormId').value = site.id;
+        document.getElementById('siteFormName').value = site.name;
+        document.getElementById('siteFormUrl').value = site.url;
+        document.getElementById('siteFormStack').value = site.stack_type;
+        document.getElementById('siteFormPort').value = site.port || 80;
+        document.getElementById('siteFormSubmitBtn').textContent = 'Perbarui Layanan';
         document.getElementById('addSiteModal').classList.add('active');
     }
 
@@ -1063,10 +1348,14 @@
         const form = event.target;
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
+        const isEdit = !!payload.id;
+
+        const url = isEdit ? `/api/monitoring/sites/${payload.id}` : '/api/monitoring/sites';
+        const method = isEdit ? 'PUT' : 'POST';
 
         try {
-            const res = await fetch('/api/monitoring/sites', {
-                method: 'POST',
+            const res = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -1075,21 +1364,48 @@
             });
             const data = await res.json();
             if (data.success) {
-                window.showToast('Layanan berhasil ditambahkan!', 'success');
+                window.showToast(`Layanan berhasil ${isEdit ? 'diperbarui' : 'ditambahkan'}!`, 'success');
                 closeAddSiteModal();
                 form.reset();
-                setTimeout(() => location.reload(), 800);
+
+                // Refresh sites list
+                const sitesRes = await fetch('/api/monitoring/sites');
+                initialSites = await sitesRes.json();
+                renderSitesGrid(initialSites);
             } else {
                 window.showToast(data.message || 'Gagal menyimpan layanan', 'error');
             }
         } catch (e) {
-            window.showToast('Gagal menambahkan layanan: ' + e.message, 'error');
+            window.showToast('Gagal memproses layanan: ' + e.message, 'error');
+        }
+    }
+
+    async function deleteSite(id) {
+        if (!confirm('Yakin ingin menghapus monitoring website ini?')) return;
+
+        try {
+            const res = await fetch(`/api/monitoring/sites/${id}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.showToast('Layanan berhasil dihapus', 'success');
+                initialSites = initialSites.filter(s => s.id !== id);
+                renderSitesGrid(initialSites);
+            } else {
+                window.showToast(data.message || 'Gagal menghapus layanan', 'error');
+            }
+        } catch (e) {
+            window.showToast('Gagal menghapus: ' + e.message, 'error');
         }
     }
 
     async function checkAllWebsites() {
         const icon = document.getElementById('checkAllIcon');
+        const icon2 = document.getElementById('checkAllWebBtnIcon');
         if (icon) icon.classList.add('animate-spin');
+        if (icon2) icon2.classList.add('animate-spin');
 
         try {
             const res = await fetch('/api/monitoring/check-all', {
@@ -1098,11 +1414,17 @@
             });
             const data = await res.json();
             window.showToast(`Pemeriksaan selesai: ${data.total_checked} web diperiksa`, 'success');
+            
+            // Refresh sites list from server
+            const sitesRes = await fetch('/api/monitoring/sites');
+            initialSites = await sitesRes.json();
+            renderSitesGrid(initialSites);
             triggerScrambleAnimations();
         } catch (e) {
             window.showToast('Gagal memeriksa situs: ' + e.message, 'error');
         } finally {
             if (icon) icon.classList.remove('animate-spin');
+            if (icon2) icon2.classList.remove('animate-spin');
         }
     }
 
@@ -1125,6 +1447,7 @@
     // Document Ready Initialization
     document.addEventListener('DOMContentLoaded', () => {
         initNeonCharts();
+        renderSitesGrid(initialSites);
         setTimeout(triggerScrambleAnimations, 400);
         if (window.lucide) window.lucide.createIcons();
     });
