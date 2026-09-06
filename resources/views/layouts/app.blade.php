@@ -17,11 +17,11 @@
     <!-- ApexCharts -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-    <!-- Custom Modern Styles -->
-    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
-    
     <!-- Vite Assets (Anime.js & Motion) -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/js/app.js'])
+
+    <!-- Custom Modern Styles (with automatic cache busting for Cloudflare & Browsers) -->
+    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}?v={{ file_exists(public_path('css/dashboard.css')) ? filemtime(public_path('css/dashboard.css')) : time() }}">
 
     @stack('styles')
 </head>

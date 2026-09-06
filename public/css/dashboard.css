@@ -126,11 +126,13 @@ body {
 
 /* Layout Container */
 .dashboard-container {
+  width: 100%;
   max-width: 1480px;
   margin: 0 auto;
   padding: 24px 28px 60px 28px;
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 /* Header & Filter Ribbon */
@@ -299,6 +301,8 @@ body {
   transition: var(--transition-smooth);
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .neon-card:hover {
@@ -328,20 +332,21 @@ body {
 /* TOP METRICS KPI CARDS (Row 1 - 4 Columns) */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
   margin-bottom: 24px;
+  width: 100%;
 }
 
 @media (max-width: 1100px) {
   .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 600px) {
   .kpi-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -350,6 +355,9 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .kpi-label {
@@ -409,6 +417,7 @@ body {
 .kpi-wave {
   width: 100%;
   height: 52px;
+  max-height: 52px;
   margin-top: auto;
   position: relative;
   overflow: hidden;
@@ -416,21 +425,23 @@ body {
 
 .kpi-wave svg {
   width: 100%;
-  height: 100%;
-  overflow: visible;
+  height: 52px;
+  max-height: 52px;
+  display: block;
 }
 
 /* CHARTS ROW (Row 2 - 2 Columns) */
 .charts-grid-row1 {
   display: grid;
-  grid-template-columns: 7fr 5fr;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   gap: 20px;
   margin-bottom: 24px;
+  width: 100%;
 }
 
 @media (max-width: 1024px) {
   .charts-grid-row1 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -504,14 +515,15 @@ body {
 /* MIDDLE ROW 2 (Horizontal Progress Bars & Server Map/Topology) */
 .charts-grid-row2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
   margin-bottom: 24px;
+  width: 100%;
 }
 
 @media (max-width: 1024px) {
   .charts-grid-row2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -600,15 +612,33 @@ body {
 /* BOTTOM ROW (Vertical Bars & Recent Orders / Activities) */
 .charts-grid-row3 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
   margin-bottom: 24px;
+  width: 100%;
 }
 
 @media (max-width: 1024px) {
   .charts-grid-row3 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* ApexCharts Container Safety & Responsiveness */
+.apexcharts-canvas,
+.apexcharts-canvas svg,
+.apexcharts-canvas foreignObject {
+  max-width: 100% !important;
+}
+
+#neonTelemetryWaveChart,
+#neonDistributionDonutChart,
+#neonThroughputBarChart,
+#neonVhostBarChart {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 /* Recent Activities / Orders List */
@@ -1204,4 +1234,19 @@ body {
   border: 1px solid rgba(244, 63, 94, 0.4);
   color: #fb7185;
 }
+
+/* Typography & Utility Helpers */
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite !important;
+}
+
 
