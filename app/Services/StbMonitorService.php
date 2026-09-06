@@ -249,53 +249,86 @@ class StbMonitorService
         $currentTime = microtime(true);
 
         $currentStats = null;
-        if (is_readable('/proc/diskstats')) {
-            $lines = explode("\n", file_get_contents('/proc/diskstats'));
-            $sectorsRead = 0;
-            $sectorsWritten = 0;
-            $ioInProgress = 0;
+        $vmReadKb = null;
+        $vmWriteKb = null;
 
+        // 1. Try reading universal kernel page I/O stats from /proc/vmstat
+        if (is_readable('/proc/vmstat')) {
+            $vmstat = @file_get_contents('/proc/vmstat');
+            if ($vmstat) {
+                if (preg_match('/pgpgin\s+(\d+)/', $vmstat, $mIn) && preg_match('/pgpgout\s+(\d+)/', $vmstat, $mOut)) {
+                    $vmReadKb = (float) $mIn[1];
+                    $vmWriteKb = (float) $mOut[1];
+                }
+            }
+        }
+
+        // 2. Read /proc/diskstats for block devices and io_in_progress
+        $sectorsRead = 0;
+        $sectorsWritten = 0;
+        $ioInProgress = 0;
+        $diskstatsFound = false;
+
+        if (is_readable('/proc/diskstats')) {
+            $lines = explode("\n", (string) @file_get_contents('/proc/diskstats'));
             foreach ($lines as $line) {
                 $p = preg_split('/\s+/', trim($line));
                 if (count($p) >= 14) {
                     $dev = $p[2];
-                    // Focus on root block device mmcblk0 or sda
-                    if (str_starts_with($dev, 'mmcblk0') && ! str_contains($dev, 'p') || str_starts_with($dev, 'sda')) {
+
+                    // Skip loop, zram, ram, and optical drives
+                    if (preg_match('/^(loop|ram|zram|sr)\d+/i', $dev)) {
+                        continue;
+                    }
+
+                    // Match all physical disks and partitions (mmcblk, sda, nvme, vda)
+                    if (preg_match('/^(mmcblk\d+(p\d+)?|sd[a-z]\d*|nvme\d+n\d+(p\d+)?|vd[a-z]\d*|xvd[a-z]\d*)/i', $dev)) {
                         $sectorsRead += (int) $p[5];
                         $sectorsWritten += (int) $p[9];
                         $ioInProgress += (int) $p[11];
+                        $diskstatsFound = true;
                     }
                 }
             }
+        }
 
+        if ($vmReadKb !== null || $diskstatsFound) {
             $currentStats = [
                 'time' => $currentTime,
+                'vm_read_kb' => $vmReadKb,
+                'vm_write_kb' => $vmWriteKb,
                 'read_sectors' => $sectorsRead,
                 'write_sectors' => $sectorsWritten,
                 'io_in_progress' => $ioInProgress,
             ];
-        }
 
-        if ($currentStats) {
             $prevStats = Cache::get($cacheKey);
-            Cache::put($cacheKey, $currentStats, 30);
+            Cache::put($cacheKey, $currentStats, 60);
 
             if ($prevStats && ($currentTime - $prevStats['time']) > 0.05) {
-                $timeDelta = $currentTime - $prevStats['time'];
-                $readSectorsDelta = max(0, $currentStats['read_sectors'] - $prevStats['read_sectors']);
-                $writeSectorsDelta = max(0, $currentStats['write_sectors'] - $prevStats['write_sectors']);
+                $timeDelta = max(0.1, $currentTime - $prevStats['time']);
 
-                // 1 sector = 512 bytes = 0.5 KB
-                $readKbS = round(($readSectorsDelta * 0.5) / $timeDelta, 1);
-                $writeKbS = round(($writeSectorsDelta * 0.5) / $timeDelta, 1);
-                $ioProg = $currentStats['io_in_progress'];
+                // Calculate Read/Write KB/s
+                if ($vmReadKb !== null && isset($prevStats['vm_read_kb']) && $prevStats['vm_read_kb'] !== null) {
+                    $readKbS = round(max(0, $vmReadKb - $prevStats['vm_read_kb']) / $timeDelta, 1);
+                    $writeKbS = round(max(0, $vmWriteKb - $prevStats['vm_write_kb']) / $timeDelta, 1);
+                } else {
+                    $readSectorsDelta = max(0, $sectorsRead - $prevStats['read_sectors']);
+                    $writeSectorsDelta = max(0, $sectorsWritten - $prevStats['write_sectors']);
+                    $readKbS = round(($readSectorsDelta * 0.5) / $timeDelta, 1);
+                    $writeKbS = round(($writeSectorsDelta * 0.5) / $timeDelta, 1);
+                }
+
                 $loadPercent = min(100, round((($readKbS + $writeKbS) / 30000) * 100, 1));
+                $ioProg = $ioInProgress;
 
                 $status = 'normal';
                 if ($loadPercent > 80 || $ioProg > 10) {
                     $status = 'critical';
-                } elseif ($loadPercent > 45 || $ioProg > 4) {
+                } elseif ($loadPercent > 40 || $ioProg > 4) {
                     $status = 'warning';
+                } elseif ($readKbS == 0.0 && $writeKbS == 0.0 && $ioProg == 0) {
+                    $status = 'idle';
                 }
 
                 return [
@@ -308,14 +341,14 @@ class StbMonitorService
             }
         }
 
-        // Local development simulated metrics
-        $simulatedRead = round(rand(20, 280) / 10, 1);
-        $simulatedWrite = round(rand(40, 450) / 10, 1);
+        // Local development simulated metrics or initial cold sample
+        $simulatedRead = round(rand(20, 250) / 10, 1);
+        $simulatedWrite = round(rand(40, 380) / 10, 1);
 
         return [
             'read_kb_s' => $simulatedRead,
             'write_kb_s' => $simulatedWrite,
-            'io_in_progress' => rand(0, 2),
+            'io_in_progress' => rand(0, 1),
             'load_status' => 'normal',
             'load_percent' => round(($simulatedRead + $simulatedWrite) / 10, 1),
         ];

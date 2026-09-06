@@ -36,6 +36,12 @@
                 <span>Cek Semua Web</span>
             </button>
 
+            <!-- Sync Nginx Virtual Hosts Button -->
+            <button class="btn" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.35); color: #a5b4fc;" onclick="syncNginxWebsites()" title="Pindai dan Sinkronkan Web dari Konfigurasi Nginx">
+                <i data-lucide="scan-search" id="syncNginxIcon" style="width: 16px; height: 16px; color: #818cf8;"></i>
+                <span>Sinkron Nginx</span>
+            </button>
+
             <!-- Nginx Inspector Modal Button -->
             <button class="btn" onclick="openNginxModal()">
                 <i data-lucide="server" style="width: 16px; height: 16px; color: #06b6d4;"></i>
@@ -432,10 +438,16 @@
             </div>
 
             <div style="margin-top: 24px;">
-                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="folder-code" style="width: 16px; height: 16px; color: #818cf8;"></i>
-                    <span>Virtual Hosts Terdeteksi di STB</span>
-                </h4>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <h4 style="font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="folder-code" style="width: 16px; height: 16px; color: #818cf8;"></i>
+                        <span>Virtual Hosts Terdeteksi di STB</span>
+                    </h4>
+                    <button class="btn btn-primary" style="font-size: 0.76rem; padding: 5px 12px;" onclick="syncNginxWebsites()">
+                        <i data-lucide="scan-search" style="width: 13px; height: 13px;"></i>
+                        <span>Impor ke Monitoring</span>
+                    </button>
+                </div>
                 <div id="vhostsListContainer" style="display: flex; flex-direction: column; gap: 8px;">
                     <!-- Dynamically populated -->
                 </div>
@@ -557,8 +569,14 @@
                 <div class="glass-card" style="grid-column: 1 / -1; padding: 48px 24px; text-align: center;">
                     <i data-lucide="inbox" style="width: 48px; height: 48px; color: var(--text-muted); margin: 0 auto 16px;"></i>
                     <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 6px;">Tidak ada website yang cocok</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Coba ubah filter atau kata kunci pencarian Anda.</p>
-                    <button class="btn btn-primary" onclick="setFilter('all', document.querySelector('.filter-btn'))">Reset Filter</button>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Belum ada website yang terdaftar atau tidak cocok dengan filter aktif.</p>
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="syncNginxWebsites()">
+                            <i data-lucide="scan-search" style="width: 15px; height: 15px;"></i>
+                            <span>Pindai & Impor Web dari Nginx</span>
+                        </button>
+                        <button class="btn" onclick="setFilter('all', document.querySelector('.filter-btn'))">Reset Filter</button>
+                    </div>
                 </div>
             `;
             if (window.lucide) window.lucide.createIcons();
@@ -755,8 +773,16 @@
 
             // Disk Load & I/O
             document.getElementById('diskIoTag').innerText = `I/O: ${data.disk_io.load_percent}%`;
-            document.getElementById('specDiskIoText').innerText = `R: ${data.disk_io.read_kb_s} KB/s • W: ${data.disk_io.write_kb_s} KB/s`;
-            document.getElementById('specDiskIoStatus').innerText = `I/O Load: ${data.disk_io.load_status.toUpperCase()}`;
+            const rSpeed = data.disk_io.read_kb_s >= 1024 ? `${(data.disk_io.read_kb_s / 1024).toFixed(1)} MB/s` : `${data.disk_io.read_kb_s} KB/s`;
+            const wSpeed = data.disk_io.write_kb_s >= 1024 ? `${(data.disk_io.write_kb_s / 1024).toFixed(1)} MB/s` : `${data.disk_io.write_kb_s} KB/s`;
+            let ioLabel = (data.disk_io.load_status || 'normal').toUpperCase();
+            if (data.disk_io.load_status === 'idle') {
+                ioLabel = 'STANDBY (IDLE)';
+            } else if (data.disk_io.load_status === 'normal') {
+                ioLabel = 'NORMAL (AKTIF)';
+            }
+            document.getElementById('specDiskIoText').innerText = `R: ${rSpeed} • W: ${wSpeed}`;
+            document.getElementById('specDiskIoStatus').innerText = `I/O Load: ${ioLabel}`;
 
             // Uptime update
             if (data.system.uptime_formatted) {
@@ -838,6 +864,31 @@
             showToast(`Berhasil memeriksa ${data.length} website aktif!`);
         } catch (err) {
             showToast('Gagal memeriksa semua web.', 'error');
+        } finally {
+            if (icon) icon.style.animation = '';
+        }
+    }
+
+    // Sync Nginx Websites from STB Configuration
+    async function syncNginxWebsites() {
+        const icon = document.getElementById('syncNginxIcon');
+        if (icon) icon.style.animation = 'spin 1s infinite linear';
+        showToast('Memindai konfigurasi Nginx STB dan menyinkronkan virtual hosts aktif...');
+
+        try {
+            const res = await fetch('/api/monitoring/nginx/sync', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            showToast(data.message || 'Sinkronisasi Nginx selesai!', 'success');
+            await fetchSites();
+            fetchNginxInfo();
+        } catch (err) {
+            showToast('Gagal menyinkronkan website dari Nginx.', 'error');
         } finally {
             if (icon) icon.style.animation = '';
         }

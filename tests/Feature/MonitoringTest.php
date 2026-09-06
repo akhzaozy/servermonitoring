@@ -67,4 +67,60 @@ class MonitoringTest extends TestCase
         $delete->assertStatus(200);
         $this->assertDatabaseCount('monitored_sites', 0);
     }
+
+    public function test_nginx_sync_endpoint_imports_active_sites(): void
+    {
+        $response = $this->postJson('/api/monitoring/nginx/sync');
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'synced_count',
+            'sites',
+            'message',
+        ]);
+        $this->assertGreaterThan(0, $response->json('synced_count'));
+        $this->assertGreaterThan(0, MonitoredSite::count());
+    }
+
+    public function test_nginx_sync_console_command(): void
+    {
+        $this->artisan('monitor:sync-nginx --no-check')
+            ->assertSuccessful();
+
+        $this->assertGreaterThan(0, MonitoredSite::count());
+    }
+
+    public function test_parse_vhost_file_with_complex_nested_locations(): void
+    {
+        $complexNginxConfig = <<<'NGINX'
+server {
+    listen 80;
+    server_name complex.example.lan;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        location ~* \.(jpg|png|gif)$ {
+            expires 30d;
+        }
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+    }
+}
+NGINX;
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'nginx_conf_');
+        file_put_contents($tempPath, $complexNginxConfig);
+
+        $nginxService = app(\App\Services\NginxService::class);
+        $parsed = $nginxService->parseVhostFile($tempPath);
+
+        @unlink($tempPath);
+
+        $this->assertCount(1, $parsed);
+        $this->assertEquals('complex.example.lan', $parsed[0]['server_name']);
+        $this->assertEquals(80, $parsed[0]['port']);
+        $this->assertEquals('nextjs', $parsed[0]['stack_type']);
+    }
 }

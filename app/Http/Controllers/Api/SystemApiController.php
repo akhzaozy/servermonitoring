@@ -71,4 +71,14 @@ class SystemApiController extends Controller
 
         return response()->json($res);
     }
+
+    /**
+     * Scan and synchronize Nginx virtual hosts into MonitoredSite database.
+     */
+    public function syncNginx(): JsonResponse
+    {
+        $result = $this->nginxService->syncVhostsToMonitoredSites(autoCheck: true);
+
+        return response()->json($result);
+    }
 }

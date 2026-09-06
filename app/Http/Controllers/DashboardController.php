@@ -20,6 +20,15 @@ class DashboardController extends Controller
     {
         $metrics = $this->stbMonitor->getSystemMetrics();
         $nginxStatus = $this->nginxService->getNginxStatus();
+        // If no sites exist yet, automatically auto-discover and sync from Nginx configs
+        if (MonitoredSite::count() === 0) {
+            try {
+                $this->nginxService->syncVhostsToMonitoredSites(autoCheck: true);
+            } catch (\Throwable $e) {
+                // Silently continue if sync encounters an error
+            }
+        }
+
         $sites = MonitoredSite::orderBy('id', 'asc')->get();
 
         $sitesWithStats = $sites->map(function (MonitoredSite $site) {

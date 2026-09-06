@@ -9,6 +9,7 @@ Route::prefix('monitoring')->group(function () {
     Route::get('/nginx', [SystemApiController::class, 'getNginxInfo']);
     Route::post('/nginx/test', [SystemApiController::class, 'testNginx']);
     Route::post('/nginx/reload', [SystemApiController::class, 'reloadNginx']);
+    Route::post('/nginx/sync', [SystemApiController::class, 'syncNginx']);
 
     Route::get('/sites', [SiteApiController::class, 'index']);
     Route::post('/sites', [SiteApiController::class, 'store']);
