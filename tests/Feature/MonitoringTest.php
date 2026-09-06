@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\MonitoredSite;
+use App\Services\NginxService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -113,7 +114,7 @@ NGINX;
         $tempPath = tempnam(sys_get_temp_dir(), 'nginx_conf_');
         file_put_contents($tempPath, $complexNginxConfig);
 
-        $nginxService = app(\App\Services\NginxService::class);
+        $nginxService = app(NginxService::class);
         $parsed = $nginxService->parseVhostFile($tempPath);
 
         @unlink($tempPath);

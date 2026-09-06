@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\BackupApiController;
 use App\Http\Controllers\Api\SiteApiController;
 use App\Http\Controllers\Api\SystemApiController;
 use Illuminate\Support\Facades\Route;
@@ -17,4 +18,9 @@ Route::prefix('monitoring')->group(function () {
     Route::delete('/sites/{site}', [SiteApiController::class, 'destroy']);
     Route::post('/sites/{site}/check', [SiteApiController::class, 'check']);
     Route::post('/check-all', [SiteApiController::class, 'checkAll']);
+
+    // STB Server Backup Routes (backup.php)
+    Route::get('/backup/status', [BackupApiController::class, 'getStatus']);
+    Route::post('/backup/run', [BackupApiController::class, 'runBackup']);
+    Route::get('/backup/logs', [BackupApiController::class, 'getLogs']);
 });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MonitoredSite;
+use App\Services\BackupService;
 use App\Services\NginxService;
 use App\Services\StbMonitorService;
 use App\Services\WebHealthService;
@@ -13,7 +14,8 @@ class DashboardController extends Controller
     public function __construct(
         protected StbMonitorService $stbMonitor,
         protected NginxService $nginxService,
-        protected WebHealthService $webHealthService
+        protected WebHealthService $webHealthService,
+        protected BackupService $backupService
     ) {}
 
     public function index(): View
@@ -53,10 +55,13 @@ class DashboardController extends Controller
             ];
         });
 
+        $backupStatus = $this->backupService->getBackupStatus();
+
         return view('dashboard', [
             'metrics' => $metrics,
             'nginxStatus' => $nginxStatus,
             'sites' => $sitesWithStats,
+            'backupStatus' => $backupStatus,
         ]);
     }
 }

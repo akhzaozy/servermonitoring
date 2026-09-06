@@ -482,6 +482,7 @@ class NginxService
                 $prev = $content[$pos - 1];
                 if (! in_array($prev, ["\n", "\r", ' ', "\t", ';', '}'], true)) {
                     $offset = $pos + 6;
+
                     continue;
                 }
             }
@@ -496,6 +497,7 @@ class NginxService
             $between = trim(substr($content, $pos + 6, $bracePos - ($pos + 6)));
             if ($between !== '') {
                 $offset = $pos + 6;
+
                 continue;
             }
 
@@ -584,4 +586,3 @@ class NginxService
         return "{$formatted} ({$stackLabel})";
     }
 }
-
