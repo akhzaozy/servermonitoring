@@ -31,7 +31,7 @@ window.scrambleElement = function (elementOrSelector, newText, options = {}) {
         animate(el, {
             innerHTML: scrambleText({
                 text: String(newText),
-                chars: options.chars || '0123456789%#@*+=~XYZ',
+                chars: options.chars || '0123456789#@*+=~XYZ',
                 duration: options.duration || 800,
                 from: options.from || 'random',
                 ...options

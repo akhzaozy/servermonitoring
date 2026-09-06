@@ -765,9 +765,11 @@
     function triggerScrambleAnimations() {
         if (window.scrambleElement) {
             window.scrambleElement('#scrambleKpi1', '99.98%', { duration: 900 });
-            window.scrambleElement('#scrambleKpi2', `${initialMetrics.cpu.usage_percent}%`, { duration: 900 });
+            const cpuVal = String(initialMetrics.cpu.usage_percent).replace(/%+$/, '');
+            const ramVal = String(initialMetrics.ram.usage_percent).replace(/%+$/, '');
+            window.scrambleElement('#scrambleKpi2', `${cpuVal}%`, { duration: 900 });
             window.scrambleElement('#scrambleKpi3', initialBackup.total_size_human || '1.62 GB', { duration: 1000 });
-            window.scrambleElement('#scrambleKpi4', `${initialMetrics.ram.usage_percent}%`, { duration: 900 });
+            window.scrambleElement('#scrambleKpi4', `${ramVal}%`, { duration: 900 });
             window.scrambleElement('#scrambleDonutCenter', '100%', { duration: 1100 });
         }
     }
@@ -1212,6 +1214,8 @@
                 }
             }
 
+            const cleanUptime = String(site.uptime_percentage !== undefined && site.uptime_percentage !== null ? site.uptime_percentage : 100).replace(/%+$/, '');
+
             html += `
                 <div class="site-card" id="site-card-${site.id}">
                     <div class="site-card-top">
@@ -1262,7 +1266,7 @@
                     <div class="uptime-history-wrap">
                         <div class="uptime-header">
                             <span>Riwayat Uptime (24 Jam)</span>
-                            <span class="font-mono" style="font-weight: 700; color: #10b981;">${site.uptime_percentage}%</span>
+                            <span class="font-mono" style="font-weight: 700; color: #10b981;">${cleanUptime}%</span>
                         </div>
                         <div class="uptime-bars">
                             ${historyBarsHtml}
@@ -1440,8 +1444,10 @@
             
             // Scramble updated metrics
             if (window.scrambleElement) {
-                window.scrambleElement('#scrambleKpi2', `${metrics.cpu.usage_percent}%`, { duration: 700 });
-                window.scrambleElement('#scrambleKpi4', `${metrics.ram.usage_percent}%`, { duration: 700 });
+                const cVal = String(metrics.cpu.usage_percent).replace(/%+$/, '');
+                const rVal = String(metrics.ram.usage_percent).replace(/%+$/, '');
+                window.scrambleElement('#scrambleKpi2', `${cVal}%`, { duration: 700 });
+                window.scrambleElement('#scrambleKpi4', `${rVal}%`, { duration: 700 });
             }
         } catch (e) {
             // Silently retry
