@@ -431,7 +431,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="activity-right">
+            <div class="activity-right">
                         <span class="pill-complete">Completed</span>
                         <span class="font-mono" style="font-size: 0.76rem; color: var(--text-muted);">{{ $backupStatus['last_run']['total_time_text'] }}</span>
                     </div>
@@ -453,10 +453,14 @@
                         <span class="font-mono" style="font-size: 0.76rem; color: var(--text-muted);">Port 80/443</span>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
     <!-- =========================================================================
-         SECTION 5: STATUS WEB AKTIF & UPTIME MONITOR (INTERACTIVE CARDS GRID)
+         SECTION 5: STATUS WEB AKTIF & UPTIME MONITOR (FULL WIDTH GRID)
          ========================================================================= -->
-    <div class="sites-section animate-entrance">
+    <div class="sites-section animate-entrance" style="width: 100%;">
         <div class="sites-header-bar">
             <div>
                 <div style="display: flex; align-items: center; gap: 10px;">
