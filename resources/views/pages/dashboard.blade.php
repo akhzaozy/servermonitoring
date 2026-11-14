@@ -237,11 +237,13 @@
                 const body = s.online
                     ? `${bar('CPU', s.cpu)}${bar('Memori', s.ram)}${bar('Disk', s.disk)}`
                     : `<div class="faint" style="font-size:12.5px">${App.esc(s.error || 'Tidak dapat dihubungi')}</div>`;
-                const meta = s.online ? `${App.esc(s.hostname || '')}${s.type === 'remote' ? ' · ' + s.latency_ms + ' ms' : ''}` : App.esc(s.base_url || '');
+                const badge = s.type === 'local' ? 'Lokal' : (s.type === 'ssh' ? (s.use_cloudflare ? 'Cloudflare SSH' : 'SSH') : 'Agent');
+                const fallbackMeta = s.type === 'ssh' ? `${s.ssh_user || ''}@${s.ssh_host || ''}` : (s.base_url || '');
+                const meta = s.online ? `${App.esc(s.hostname || fallbackMeta)}${s.type !== 'local' ? ' · ' + s.latency_ms + ' ms' : ''}` : App.esc(fallbackMeta);
                 return `<a class="server-tile ${s.id === SERVER_ID ? 'active' : ''}" href="/servers/${s.id}/select">
                     <div class="server-tile-head">
                         <div class="server-tile-name"><span class="dot ${s.online ? 'ok' : 'bad'}"></span><b>${App.esc(s.name)}</b></div>
-                        <span class="pill plain">${s.type === 'local' ? 'Lokal' : 'Remote'}</span>
+                        <span class="pill plain">${badge}</span>
                     </div>
                     <div class="cell-sub" style="margin-top:-8px">${meta}</div>
                     ${body}

@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Server;
 use App\Services\AgentClient;
+use App\Services\SshServerService;
 use App\Services\TerminalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TerminalApiController extends Controller
 {
-    public function exec(Request $request, TerminalService $terminal, AgentClient $agent): JsonResponse
+    public function exec(Request $request, TerminalService $terminal, AgentClient $agent, SshServerService $ssh): JsonResponse
     {
         if (! config('monitor.terminal.enabled')) {
             return response()->json(['message' => 'Terminal dinonaktifkan (TERMINAL_ENABLED=false).'], 403);
@@ -28,6 +29,14 @@ class TerminalApiController extends Controller
 
         if ($server->isLocal()) {
             return response()->json($terminal->run($command, $data['cwd'] ?? null));
+        }
+
+        if ($server->isSsh()) {
+            try {
+                return response()->json($ssh->exec($server, $command, $data['cwd'] ?? null));
+            } catch (\Throwable $e) {
+                return response()->json(['message' => $e->getMessage()], 502);
+            }
         }
 
         try {

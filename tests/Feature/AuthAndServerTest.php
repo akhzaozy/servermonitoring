@@ -108,4 +108,26 @@ class AuthAndServerTest extends TestCase
         $local = Server::local();
         $this->deleteJson('/api/monitoring/servers/'.$local->id)->assertStatus(422);
     }
+
+    public function test_ssh_cloudflare_server_can_be_created_and_encrypts_credentials(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $res = $this->postJson('/api/monitoring/servers', [
+            'type' => 'ssh',
+            'name' => 'Server FSTI',
+            'ssh_host' => 'server-fsti.myst-tech.com',
+            'ssh_user' => 'adminfsti',
+            'ssh_password' => 'rahasia123',
+            'use_cloudflare' => true,
+        ])->assertCreated();
+
+        $this->assertSame('ssh', $res->json('server.type'));
+        $this->assertTrue($res->json('server.use_cloudflare'));
+        $this->assertTrue($res->json('server.has_password'));
+        $this->assertArrayNotHasKey('ssh_password', $res->json('server'));
+
+        $srv = Server::find($res->json('server.id'));
+        $this->assertSame('rahasia123', $srv->ssh_password);
+    }
 }

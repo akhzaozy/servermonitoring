@@ -7,6 +7,7 @@ use App\Models\Server;
 use App\Models\SystemMetricLog;
 use App\Services\AgentClient;
 use App\Services\NginxService;
+use App\Services\SshServerService;
 use App\Services\StbMonitorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,13 +22,21 @@ class SystemApiController extends Controller
     /**
      * Metrik real-time + riwayat untuk server terpilih (?server=ID, default: lokal).
      */
-    public function getMetrics(Request $request, AgentClient $agent): JsonResponse
+    public function getMetrics(Request $request, AgentClient $agent, SshServerService $ssh): JsonResponse
     {
         $server = Server::resolve($request->integer('server') ?: null);
 
         if ($server->isLocal()) {
             $metrics = $this->stbMonitor->getSystemMetrics();
             $serverId = null;
+        } elseif ($server->isSsh()) {
+            try {
+                $metrics = $ssh->metrics($server);
+            } catch (\Throwable $e) {
+                return response()->json(['online' => false, 'message' => $e->getMessage()], 502);
+            }
+            $this->stbMonitor->recordSnapshot($metrics, $server->id);
+            $serverId = $server->id;
         } else {
             try {
                 $metrics = $agent->metrics($server);
@@ -60,43 +69,23 @@ class SystemApiController extends Controller
         return response()->json($metrics);
     }
 
-    /**
-     * Get Nginx service status and vhosts.
-     */
     public function getNginxInfo(): JsonResponse
     {
-        $status = $this->nginxService->getNginxStatus();
-
-        return response()->json($status);
+        return response()->json($this->nginxService->getNginxStatus());
     }
 
-    /**
-     * Test Nginx configuration (nginx -t).
-     */
     public function testNginx(): JsonResponse
     {
-        $res = $this->nginxService->testConfiguration();
-
-        return response()->json($res);
+        return response()->json($this->nginxService->testConfiguration());
     }
 
-    /**
-     * Reload Nginx daemon.
-     */
     public function reloadNginx(): JsonResponse
     {
-        $res = $this->nginxService->reloadService();
-
-        return response()->json($res);
+        return response()->json($this->nginxService->reloadService());
     }
 
-    /**
-     * Scan and synchronize Nginx virtual hosts into MonitoredSite database.
-     */
     public function syncNginx(): JsonResponse
     {
-        $result = $this->nginxService->syncVhostsToMonitoredSites(autoCheck: true);
-
-        return response()->json($result);
+        return response()->json($this->nginxService->syncVhostsToMonitoredSites(autoCheck: true));
     }
 }
