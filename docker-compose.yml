@@ -1,28 +1,65 @@
-# Agent + dashboard untuk server tambahan (mis. Server 2).
-#   1) cp .env.docker.example .env      -> isi APP_KEY, AGENT_TOKEN, ADMIN_*
-#   2) docker compose up -d --build
-# Dashboard: http://IP-SERVER:8080   |   Agent: http://IP-SERVER:8080/api/agent/*
+# ==============================================================================
+# Portainer Git Stack — Server Monitoring & Telemetry Agent
+# Repository : https://github.com/akhzaozy/servermonitoring.git
+# Compose    : docker-compose.yml
+# Port Host  : 8576 -> 8080 (di dalam container)
+# ==============================================================================
 services:
   monitor:
-    build: .
-    image: monitor:latest
-    container_name: monitor
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: servermonitoring:latest
+    container_name: servermonitoring
     restart: unless-stopped
+    pid: "host"
     ports:
-      - "${MONITOR_PORT:-8080}:8080"
-    env_file: .env
+      - "${MONITOR_PORT:-8576}:8080"
     environment:
-      APP_ENV: production
+      APP_NAME: "${MONITOR_APP_NAME:-Server Monitor}"
+      APP_ENV: "production"
       APP_DEBUG: "false"
-      MONITOR_HOST_ROOT: /host
-      # Agar perintah di terminal berjalan di host (bukan di dalam container), isi TERMINAL_SSH_* di .env.
+      APP_URL: "${MONITOR_APP_URL:-http://localhost:8576}"
+      APP_KEY: "${MONITOR_APP_KEY:-base64:q+At+5G+A01gnVy+vZBRBY5qkvHV9XeqKWdmqX/GWhs=}"
+
+      # Database SQLite otomatis tersimpan di volume /data
+      DB_CONNECTION: "${MONITOR_DB_CONNECTION:-sqlite}"
+      DB_DATABASE: "${MONITOR_DB_DATABASE:-/data/database.sqlite}"
+      SESSION_DRIVER: "database"
+      CACHE_STORE: "database"
+      QUEUE_CONNECTION: "sync"
+      LOG_CHANNEL: "stderr"
+
+      # Identitas Server & Host Telemetry Mount (/host)
+      MONITOR_SERVER_NAME: "${MONITOR_SERVER_NAME:-Server Portainer}"
+      MONITOR_HOSTNAME: "${MONITOR_HOSTNAME:-}"
+      MONITOR_HOST_ROOT: "/host"
+      PORTAINER_URL: "${PORTAINER_URL:-}"
+
+      # Akun Login Dashboard (dibuat otomatis saat container start)
+      ADMIN_NAME: "${ADMIN_NAME:-Administrator}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@monitor.local}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-Monitor#2026}"
+
+      # Token API Agent untuk ditarik datanya dari Server utama (/api/agent/*)
+      AGENT_TOKEN: "${AGENT_TOKEN:-stb-agent-secret-token-2026}"
+      AGENT_ALLOW_EXEC: "${AGENT_ALLOW_EXEC:-true}"
+
+      # Konfigurasi Web Terminal
+      TERMINAL_ENABLED: "${TERMINAL_ENABLED:-true}"
+      TERMINAL_TIMEOUT: "${TERMINAL_TIMEOUT:-30}"
+      TERMINAL_SSH_HOST: "${TERMINAL_SSH_HOST:-}"
+      TERMINAL_SSH_PORT: "${TERMINAL_SSH_PORT:-22}"
+      TERMINAL_SSH_USER: "${TERMINAL_SSH_USER:-}"
+      TERMINAL_SSH_KEY: "${TERMINAL_SSH_KEY:-/ssh/id_ed25519}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
+      # Penyimpanan persisten SQLite & riwayat metrik
       - monitor-data:/data
-      # Host root (read-only) supaya disk, OS, dan hostname yang terbaca adalah milik server, bukan container.
+      # Mount root filesystem host (read-only) untuk menarik data disk, OS, CPU/RAM, & vhost Nginx
       - /:/host:ro
-      # Opsional: kunci SSH untuk terminal host (lihat DEPLOY.md)
+      # Opsional: mount SSH key bila ingin terminal masuk ke shell host utama
       # - ./ssh:/ssh:ro
 
 volumes:

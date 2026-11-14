@@ -13,7 +13,7 @@ window.inView = inView;
 window.motionStagger = motionStagger;
 
 /**
- * Cyber Scramble Text Helper powered by Anime.js v4
+ * Scramble Text Helper powered by Anime.js v4
  * @param {HTMLElement|string} elementOrSelector
  * @param {string} newText
  * @param {object} options
@@ -22,7 +22,6 @@ window.scrambleElement = function (elementOrSelector, newText, options = {}) {
     const el = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) : elementOrSelector;
     if (!el) return;
 
-    // Ensure element has starting text content for anime.js scramble
     if (!el.textContent && !el.innerText) {
         el.textContent = ' ';
     }
@@ -31,35 +30,33 @@ window.scrambleElement = function (elementOrSelector, newText, options = {}) {
         animate(el, {
             innerHTML: scrambleText({
                 text: String(newText),
-                chars: options.chars || '0123456789#@*+=~XYZ',
-                duration: options.duration || 800,
+                chars: options.chars || '0123456789%ms.•ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                duration: options.duration || 750,
                 from: options.from || 'random',
                 ...options
             }),
-            duration: options.duration || 800,
+            duration: options.duration || 750,
             ease: 'linear'
         });
     } catch (e) {
-        console.warn('Anime scramble fallback:', e);
         el.textContent = String(newText);
     }
 };
 
 /**
- * Trigger entrance animations on cards and elements using Framer-Motion engine (Motion)
+ * Trigger smooth staggered entrance animations on cards using Framer Motion (motion)
  */
 window.initMotionCards = function () {
-    const cards = document.querySelectorAll('.animate-entrance');
+    const cards = document.querySelectorAll('.animate-entrance, .main .card');
     if (cards.length > 0) {
         motionAnimate(
             cards,
-            { opacity: [0, 1], y: [20, 0], scale: [0.98, 1] },
-            { delay: motionStagger(0.06), duration: 0.6, easing: [0.16, 1, 0.3, 1] }
+            { opacity: [0, 1], y: [14, 0], scale: [0.99, 1] },
+            { delay: motionStagger(0.045), duration: 0.5, easing: [0.16, 1, 0.3, 1] }
         );
     }
 };
 
-// Auto trigger on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
     window.initMotionCards();
 });

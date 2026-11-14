@@ -8,6 +8,22 @@ use Illuminate\Support\Facades\Cache;
 class StbMonitorService
 {
     /**
+     * Resolve a host path when MONITOR_HOST_ROOT (/host) is mounted in Docker.
+     */
+    protected function hostPath(string $path): string
+    {
+        $root = rtrim((string) config('monitor.host_root', '/'), '/');
+        if ($root !== '' && $root !== '/') {
+            $candidate = $root.'/'.ltrim($path, '/');
+            if (file_exists($candidate) || is_readable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $path;
+    }
+
+    /**
      * Get complete STB metrics snapshot.
      *
      * @return array<string, mixed>
@@ -44,8 +60,8 @@ class StbMonitorService
     public function getCpuMetrics(): array
     {
         $cores = 4;
-        if (is_readable('/proc/cpuinfo')) {
-            $cpuinfo = file_get_contents('/proc/cpuinfo');
+        if (is_readable($this->hostPath('/proc/cpuinfo'))) {
+            $cpuinfo = file_get_contents($this->hostPath('/proc/cpuinfo'));
             $cores = max(1, substr_count($cpuinfo, 'processor'));
         } elseif (PHP_OS_FAMILY === 'Darwin') {
             $ncpu = shell_exec('sysctl -n hw.ncpu 2>/dev/null');
@@ -57,10 +73,10 @@ class StbMonitorService
         $loadAvg = sys_getloadavg() ?: [0.15, 0.20, 0.18];
 
         $usagePercent = 0.0;
-        if (is_readable('/proc/stat')) {
-            $stat1 = file_get_contents('/proc/stat');
+        if (is_readable($this->hostPath('/proc/stat'))) {
+            $stat1 = file_get_contents($this->hostPath('/proc/stat'));
             usleep(80000); // 80ms sample
-            $stat2 = file_get_contents('/proc/stat');
+            $stat2 = file_get_contents($this->hostPath('/proc/stat'));
 
             $info1 = $this->parseProcStat($stat1);
             $info2 = $this->parseProcStat($stat2);
@@ -125,8 +141,8 @@ class StbMonitorService
      */
     public function getRamMetrics(): array
     {
-        if (is_readable('/proc/meminfo')) {
-            $meminfo = file_get_contents('/proc/meminfo');
+        if (is_readable($this->hostPath('/proc/meminfo'))) {
+            $meminfo = file_get_contents($this->hostPath('/proc/meminfo'));
             $data = [];
             foreach (explode("\n", $meminfo) as $line) {
                 if (preg_match('/^(\w+):\s+(\d+)\s+kB/', $line, $matches)) {
@@ -203,14 +219,15 @@ class StbMonitorService
         ];
 
         // Check additional mounts on STB (like /mnt/usb, /media/sda1)
-        if (is_readable('/proc/mounts')) {
-            $mounts = file_get_contents('/proc/mounts');
+        if (is_readable($this->hostPath('/proc/mounts'))) {
+            $mounts = file_get_contents($this->hostPath('/proc/mounts'));
             foreach (explode("\n", $mounts) as $line) {
                 if (preg_match('#^(/dev/sd[a-z][0-9]|/dev/nvme[0-9]n[0-9]p[0-9])\s+([/\w\-]+)\s+(ext4|btrfs|vfat|ntfs)#', $line, $m)) {
                     $mp = $m[2];
-                    if ($mp !== '/' && is_dir($mp)) {
-                        $pTotal = @disk_total_space($mp);
-                        $pFree = @disk_free_space($mp);
+                    $targetMp = $this->hostPath($mp);
+                    if ($mp !== '/' && is_dir($targetMp)) {
+                        $pTotal = @disk_total_space($targetMp);
+                        $pFree = @disk_free_space($targetMp);
                         if ($pTotal && $pFree) {
                             $pUsed = $pTotal - $pFree;
                             $partitions[] = [
@@ -252,8 +269,8 @@ class StbMonitorService
         $vmWriteKb = null;
 
         // 1. Try reading universal kernel page I/O stats from /proc/vmstat
-        if (is_readable('/proc/vmstat')) {
-            $vmstat = @file_get_contents('/proc/vmstat');
+        if (is_readable($this->hostPath('/proc/vmstat'))) {
+            $vmstat = @file_get_contents($this->hostPath('/proc/vmstat'));
             if ($vmstat) {
                 if (preg_match('/pgpgin\s+(\d+)/', $vmstat, $mIn) && preg_match('/pgpgout\s+(\d+)/', $vmstat, $mOut)) {
                     $vmReadKb = (float) $mIn[1];
@@ -268,8 +285,8 @@ class StbMonitorService
         $ioInProgress = 0;
         $diskstatsFound = false;
 
-        if (is_readable('/proc/diskstats')) {
-            $lines = explode("\n", (string) @file_get_contents('/proc/diskstats'));
+        if (is_readable($this->hostPath('/proc/diskstats'))) {
+            $lines = explode("\n", (string) @file_get_contents($this->hostPath('/proc/diskstats')));
             foreach ($lines as $line) {
                 $p = preg_split('/\s+/', trim($line));
                 if (count($p) >= 14) {
@@ -366,7 +383,8 @@ class StbMonitorService
             '/etc/armbianmonitor/datasrc/temp',
         ];
 
-        foreach ($tempPaths as $path) {
+        foreach ($tempPaths as $rawPath) {
+            $path = $this->hostPath($rawPath);
             if (is_readable($path)) {
                 $raw = trim((string) file_get_contents($path));
                 if (is_numeric($raw)) {
@@ -402,7 +420,9 @@ class StbMonitorService
      */
     public function getSystemInfo(): array
     {
-        $hostname = config('monitor.hostname') ?: (gethostname() ?: 'server');
+        $hostEtc = $this->hostPath('/etc/hostname');
+        $detectedHost = is_readable($hostEtc) ? trim((string) @file_get_contents($hostEtc)) : '';
+        $hostname = config('monitor.hostname') ?: ($detectedHost ?: (gethostname() ?: 'server'));
         $kernel = php_uname('r');
         $arch = php_uname('m');
 
@@ -419,17 +439,19 @@ class StbMonitorService
         }
 
         $model = 'Linux Server';
-        if (is_readable('/proc/device-tree/model')) {
-            $model = trim(file_get_contents('/proc/device-tree/model'));
-        } elseif (is_readable('/sys/firmware/devicetree/base/model')) {
-            $model = trim(file_get_contents('/sys/firmware/devicetree/base/model'));
+        if (is_readable($this->hostPath('/proc/device-tree/model'))) {
+            $model = trim((string) file_get_contents($this->hostPath('/proc/device-tree/model')), "\0\r\n\t ");
+        } elseif (is_readable($this->hostPath('/sys/firmware/devicetree/base/model'))) {
+            $model = trim((string) file_get_contents($this->hostPath('/sys/firmware/devicetree/base/model')), "\0\r\n\t ");
+        } elseif (is_readable($this->hostPath('/sys/devices/virtual/dmi/id/product_name'))) {
+            $model = trim((string) file_get_contents($this->hostPath('/sys/devices/virtual/dmi/id/product_name')));
         } elseif (PHP_OS_FAMILY === 'Darwin') {
             $model = 'Apple Silicon / Mac Host';
         }
 
         $uptimeSeconds = 0;
-        if (is_readable('/proc/uptime')) {
-            $up = explode(' ', file_get_contents('/proc/uptime'));
+        if (is_readable($this->hostPath('/proc/uptime'))) {
+            $up = explode(' ', file_get_contents($this->hostPath('/proc/uptime')));
             $uptimeSeconds = (int) ($up[0] ?? 0);
         } else {
             $uptimeSeconds = 345600; // 4 days default

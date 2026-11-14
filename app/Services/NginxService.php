@@ -169,17 +169,25 @@ class NginxService
         $vhosts = [];
         $scannedFiles = [];
 
-        // 1. Try dumping full active configuration using nginx -T
-        if ($this->isNginxInstalled()) {
+        $hostRoot = rtrim((string) config('monitor.host_root', '/'), '/');
+        $inContainerHostMount = ($hostRoot !== '' && $hostRoot !== '/' && is_dir($hostRoot.'/etc'));
+
+        // 1. Try dumping full active configuration using nginx -T (only on bare-metal host, not container internal nginx)
+        if (! $inContainerHostMount && $this->isNginxInstalled()) {
             $dump = @shell_exec('nginx -T 2>/dev/null || sudo nginx -T 2>/dev/null');
             if ($dump && str_contains($dump, 'server {')) {
                 $vhosts = $this->parseNginxDump($dump);
             }
         }
 
-        // 2. If nginx -T didn't find any or isn't available, scan filesystem paths
+        // 2. If nginx -T didn't find any or running inside Docker with /host mount, scan filesystem paths
         if (empty($vhosts)) {
             $paths = [
+                $hostRoot.'/etc/nginx/sites-enabled',
+                $hostRoot.'/etc/nginx/conf.d',
+                $hostRoot.'/etc/nginx/sites-available',
+                $hostRoot.'/www/server/panel/vhost/nginx',
+                $hostRoot.'/www/server/nginx/conf/vhost',
                 '/etc/nginx/sites-enabled',
                 '/etc/nginx/conf.d',
                 '/etc/nginx/sites-available',

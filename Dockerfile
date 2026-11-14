@@ -6,22 +6,24 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction --ignore-platform-reqs
 COPY . .
-RUN composer dump-autoload --optimize --no-dev --no-scripts --ignore-platform-reqs
+RUN rm -f .env \
+    && composer dump-autoload --optimize --no-dev --no-scripts --ignore-platform-reqs
 
 # ---- Stage 2: runtime (nginx + php-fpm, berjalan sebagai www-data di port 8080) ----
 FROM serversideup/php:8.4-fpm-nginx
 
 USER root
-# openssh-client: dipakai terminal bila TERMINAL_SSH_HOST diisi (akses shell host).
+# openssh-client & procps: dipakai oleh metrik sistem dan web terminal.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssh-client procps \
+    && apt-get install -y --no-install-recommends openssh-client procps curl \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /data \
     && chown www-data:www-data /data
 
 COPY --chown=www-data:www-data --from=vendor /app /var/www/html
 COPY docker/entrypoint.d/ /etc/entrypoint.d/
-RUN chmod +x /etc/entrypoint.d/*.sh \
+RUN rm -f /var/www/html/.env \
+    && chmod +x /etc/entrypoint.d/*.sh \
     && mkdir -p /var/www/html/storage/framework/{cache,sessions,views} /var/www/html/storage/logs /var/www/html/bootstrap/cache \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
