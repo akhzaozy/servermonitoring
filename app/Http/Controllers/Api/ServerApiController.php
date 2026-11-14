@@ -68,7 +68,7 @@ class ServerApiController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $type = $request->input('type', 'ssh');
+        $type = $request->input('type', $request->filled('base_url') ? 'remote' : 'ssh');
         if (! in_array($type, ['ssh', 'remote'], true)) {
             $type = 'remote';
         }
