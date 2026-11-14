@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 
 class Server extends Model
 {
@@ -48,8 +50,22 @@ class Server extends Model
     /**
      * Server tempat dashboard berjalan. Dibuat otomatis jika belum ada.
      */
+    public static function ensureSchema(): void
+    {
+        try {
+            if (! Schema::hasTable('servers') ||
+                ! Schema::hasColumn('servers', 'ssh_host')) {
+                Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Throwable) {
+            // ignore
+        }
+    }
+
     public static function local(): self
     {
+        static::ensureSchema();
+
         return static::firstOrCreate(['type' => 'local'], [
             'name' => config('monitor.server_name'),
             'portainer_url' => config('monitor.portainer_url'),

@@ -9,6 +9,8 @@ use App\Services\SshServerService;
 use App\Services\StbMonitorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 class ServerApiController extends Controller
 {
@@ -97,7 +99,22 @@ class ServerApiController extends Controller
             $data['type'] = 'remote';
         }
 
-        $server = Server::create($data);
+        try {
+            Server::ensureSchema();
+            $server = Server::create($data);
+        } catch (\Throwable $e) {
+            // If missing column or table, try running migration and retry once
+            try {
+                Artisan::call('migrate', ['--force' => true]);
+                $server = Server::create($data);
+            } catch (\Throwable $inner) {
+                Log::error('Server create failed: '.$inner->getMessage());
+
+                return response()->json([
+                    'message' => 'Gagal menyimpan server: '.$inner->getMessage(),
+                ], 422);
+            }
+        }
 
         return response()->json(['message' => 'Server ditambahkan.', 'server' => $this->present($server)], 201);
     }
@@ -153,7 +170,21 @@ class ServerApiController extends Controller
             }
         }
 
-        $server->update($data);
+        try {
+            Server::ensureSchema();
+            $server->update($data);
+        } catch (\Throwable $e) {
+            try {
+                Artisan::call('migrate', ['--force' => true]);
+                $server->update($data);
+            } catch (\Throwable $inner) {
+                Log::error('Server update failed: '.$inner->getMessage());
+
+                return response()->json([
+                    'message' => 'Gagal memperbarui server: '.$inner->getMessage(),
+                ], 422);
+            }
+        }
 
         return response()->json(['message' => 'Server diperbarui.', 'server' => $this->present($server->fresh())]);
     }
@@ -201,6 +232,27 @@ class ServerApiController extends Controller
      */
     protected function present(Server $s): array
     {
+        $hasPassword = false;
+        try {
+            $hasPassword = ! empty($s->ssh_password);
+        } catch (\Throwable) {
+            $hasPassword = false;
+        }
+
+        $hasKey = false;
+        try {
+            $hasKey = ! empty($s->ssh_key);
+        } catch (\Throwable) {
+            $hasKey = false;
+        }
+
+        $hasToken = false;
+        try {
+            $hasToken = ! empty($s->token);
+        } catch (\Throwable) {
+            $hasToken = false;
+        }
+
         return [
             'id' => $s->id,
             'name' => $s->name,
@@ -210,10 +262,10 @@ class ServerApiController extends Controller
             'ssh_port' => $s->ssh_port ?? 22,
             'ssh_user' => $s->ssh_user,
             'use_cloudflare' => (bool) $s->use_cloudflare,
-            'has_password' => (bool) $s->ssh_password,
-            'has_key' => (bool) $s->ssh_key,
+            'has_password' => $hasPassword,
+            'has_key' => $hasKey,
             'portainer_url' => $s->portainer_url,
-            'has_token' => (bool) $s->token,
+            'has_token' => $hasToken,
         ];
     }
 
