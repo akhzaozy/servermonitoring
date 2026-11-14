@@ -18,7 +18,7 @@
     <div class="login-orb login-orb-2"></div>
 
     <div class="login-shell">
-        {{-- Left Panel: Live Telemetry & Multi-Server Preview --}}
+        {{-- Left Panel: Live Telemetry & WITA Time Showcase --}}
         <section class="login-showcase" data-motion-panel>
             <div class="login-showcase-top">
                 <div class="brand" style="padding:0">
@@ -27,36 +27,36 @@
                 </div>
                 <div class="login-status-badge mono">
                     <span class="pulse-dot"></span>
-                    <span id="scrambleBadge">REALTIME TELEMETRY · PORT 8576</span>
+                    <span id="witaBadgeClock">MEMUAT WAKTU WITA…</span>
                 </div>
             </div>
 
             <div class="login-hero-copy" data-motion-item>
-                <h2>Observabilitas infrastruktur &amp; terminal dalam satu tempat.</h2>
-                <p>Pantau metrik CPU, memori, penyimpanan, status website, backup vault, serta kelola multi-server Portainer secara real-time.</p>
+                <h2>Observabilitas infrastruktur &amp; layanan secara terpusat.</h2>
+                <p>Pantau ketersediaan layanan web, kesehatan sumber daya server, dan pencadangan data secara real-time dalam satu panel terpadu.</p>
             </div>
 
             <div class="login-preview-card" data-motion-item>
                 <div class="login-preview-metrics">
                     <div class="login-metric-box" data-motion-kpi>
-                        <span>Uptime Index</span>
+                        <span>Uptime Layanan</span>
                         <div>
                             <b class="mono" id="prevUptime">99.98%</b>
                             <small class="mono">+0.12% stabil</small>
                         </div>
                     </div>
                     <div class="login-metric-box" data-motion-kpi>
-                        <span>Beban CPU</span>
+                        <span>Status Beban</span>
                         <div>
                             <b class="mono" id="prevCpu">14.2%</b>
-                            <small class="mono" style="color:var(--text-2)">Multi-core</small>
+                            <small class="mono" style="color:var(--text-2)">Optimal</small>
                         </div>
                     </div>
                     <div class="login-metric-box" data-motion-kpi>
-                        <span>Agent Ping</span>
+                        <span>Waktu Server</span>
                         <div>
-                            <b class="mono" id="prevPing">12 ms</b>
-                            <small class="mono">Port 8576</small>
+                            <b class="mono" id="witaCardClock">--:--:--</b>
+                            <small class="mono">WITA (UTC+8)</small>
                         </div>
                     </div>
                 </div>
@@ -64,7 +64,7 @@
                 <div class="login-wave-box">
                     <div class="login-wave-head">
                         <span>Live Telemetry Stream</span>
-                        <span class="mono" id="waveLiveTag">SYNCED</span>
+                        <span class="mono" id="witaDateTag">ZONA WITA</span>
                     </div>
                     <svg class="login-wave-svg" viewBox="0 0 420 76" preserveAspectRatio="none">
                         <defs>
@@ -82,15 +82,15 @@
                 <div class="login-nodes-row">
                     <div class="login-node-chip" data-motion-chip>
                         <span class="dot ok"></span>
-                        <span>Server 1 · Local Host</span>
+                        <span>Monitoring Aktif</span>
                     </div>
                     <div class="login-node-chip" data-motion-chip>
                         <span class="dot ok"></span>
-                        <span class="mono">Server 2 · Portainer :8576</span>
+                        <span>Health Check Otomatis</span>
                     </div>
                     <div class="login-node-chip" data-motion-chip>
                         <span class="dot ok"></span>
-                        <span>Web Terminal Ready</span>
+                        <span>Sesi Terenkripsi</span>
                     </div>
                 </div>
             </div>
@@ -104,7 +104,7 @@
                     <span class="pill ok">Terenkripsi</span>
                 </div>
                 <h1>Masuk ke Monitor</h1>
-                <p>Gunakan akun administrator untuk mengakses dashboard &amp; terminal.</p>
+                <p>Gunakan akun yang terdaftar untuk mengakses panel pemantauan.</p>
             </div>
 
             <form class="login-form" id="loginForm" method="POST" action="{{ route('login.attempt') }}">
@@ -113,7 +113,7 @@
                     <label for="email">Alamat Email</label>
                     <div class="input-wrap">
                         <svg class="icon input-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                        <input class="input" id="email" name="email" type="email" value="{{ old('email') }}" placeholder="admin@monitor.local" autocomplete="username" autofocus required>
+                        <input class="input" id="email" name="email" type="email" value="{{ old('email') }}" placeholder="nama@domain.com" autocomplete="username" autofocus required>
                         <span class="input-focus-beam"></span>
                     </div>
                     @error('email')<div class="field-error" id="loginErrorMsg">{{ $message }}</div>@enderror
@@ -138,7 +138,7 @@
                         <input type="checkbox" name="remember" value="1">
                         <span>Ingat perangkat ini</span>
                     </label>
-                    <span class="mono faint" style="font-size:11.5px">SSH + Agent v2</span>
+                    <span class="mono faint" style="font-size:11.5px" id="witaFormClock">--:-- WITA</span>
                 </div>
 
                 <button class="btn btn-primary login-submit" type="submit" id="loginSubmitBtn" data-motion-item>
@@ -148,8 +148,8 @@
             </form>
 
             <div class="login-footer-meta" data-motion-item>
-                <span>Multi-Server Telemetry</span>
-                <span class="mono">Docker :8576 · GitHub Sync</span>
+                <span>Sistem Pemantauan Terpadu</span>
+                <span class="mono" id="witaFooterDate">WITA (UTC+8)</span>
             </div>
         </section>
     </div>
@@ -161,7 +161,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = document.getElementById('loginCard');
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
 
-    // 1. Framer Motion (motion) staggered spring entrance
+    // 1. Live WITA Clock (Asia/Makassar, UTC+8)
+    const badgeEl = document.getElementById('witaBadgeClock');
+    const cardClockEl = document.getElementById('witaCardClock');
+    const dateTagEl = document.getElementById('witaDateTag');
+    const formClockEl = document.getElementById('witaFormClock');
+    const footerDateEl = document.getElementById('witaFooterDate');
+
+    const timeFmt = new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Makassar',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    const dateFmt = new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Makassar',
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+
+    function updateWitaClock(initial = false) {
+        const now = new Date();
+        const t = timeFmt.format(now).replace(/\./g, ':');
+        const d = dateFmt.format(now).toUpperCase();
+        const badgeText = `${d} · ${t} WITA`;
+
+        if (initial && window.scrambleElement) {
+            window.scrambleElement(badgeEl, badgeText, { duration: 700 });
+            window.scrambleElement(cardClockEl, t, { duration: 600 });
+        } else {
+            if (badgeEl) badgeEl.textContent = badgeText;
+            if (cardClockEl) cardClockEl.textContent = t;
+        }
+        if (dateTagEl) dateTagEl.textContent = `${t} WITA`;
+        if (formClockEl) formClockEl.textContent = `${t} WITA`;
+        if (footerDateEl) footerDateEl.textContent = `${d} · WITA`;
+    }
+    updateWitaClock(true);
+    setInterval(() => updateWitaClock(false), 1000);
+
+    // 2. Framer Motion (motion) staggered spring entrance
     if (window.motionAnimate && window.motionStagger) {
         window.motionAnimate(
             '[data-motion-panel]',
@@ -180,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
-    // 2. Input focus beam animation via Framer Motion
+    // 3. Input focus beam animation via Framer Motion
     document.querySelectorAll('.input-wrap .input').forEach(inp => {
         const beam = inp.parentElement.querySelector('.input-focus-beam');
         const icon = inp.parentElement.querySelector('.input-icon');
@@ -199,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 3. Password visibility toggle with Motion micro-animation
+    // 4. Password visibility toggle with Motion micro-animation
     const pwdInput = document.getElementById('password');
     const pwdToggle = document.getElementById('pwdToggle');
     const eyeOpen = document.getElementById('eyeOpen');
@@ -215,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pwdInput.focus();
     });
 
-    // 4. Cursor spotlight & subtle 3D perspective card tilt (desktop only)
+    // 5. Cursor spotlight & subtle 3D perspective card tilt (desktop only)
     if (!isTouch) {
         window.addEventListener('pointermove', e => {
             stage.style.setProperty('--mx', `${e.clientX}px`);
@@ -240,9 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 5. Anime.js v4 continuous ambient orbs + SVG telemetry wave + scramble text
+    // 6. Anime.js v4 continuous ambient orbs + SVG telemetry wave + scramble text
     if (window.animateAnime) {
-        // Floating background orbs
         window.animateAnime('.login-orb-1', {
             translateX: [-25, 30],
             translateY: [-15, 25],
@@ -262,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ease: 'inOutSine'
         });
 
-        // Draw SVG telemetry wave line
         const wavePath = document.getElementById('loginWavePath');
         if (wavePath && wavePath.getTotalLength) {
             const len = wavePath.getTotalLength();
@@ -275,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Pulse indicator dot on wave
         window.animateAnime('#loginWaveDot', {
             r: [3, 5, 3],
             duration: 1800,
@@ -283,7 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ease: 'inOutSine'
         });
 
-        // Elastic shake if login failed with validation error
         if (card?.dataset.hasError === '1') {
             window.animateAnime(card, {
                 translateX: [-10, 10, -7, 7, -4, 4, 0],
@@ -293,26 +331,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 6. Anime.js scrambleText live telemetry ticker
+    // 7. Anime.js scrambleText live CPU preview ticker
     if (window.scrambleElement) {
-        const badges = [
-            'REALTIME TELEMETRY · PORT 8576',
-            'PORTAINER GITOPS · READY',
-            'MULTI-NODE AGENT · ONLINE'
-        ];
-        const cpus = ['14.2%', '11.8%', '16.5%', '12.9%'];
-        const pings = ['12 ms', '11 ms', '14 ms', '10 ms'];
+        const cpus = ['14.2%', '11.8%', '13.5%', '12.4%'];
         let idx = 0;
-
         setInterval(() => {
-            idx = (idx + 1) % badges.length;
-            window.scrambleElement('#scrambleBadge', badges[idx], { duration: 750 });
-            window.scrambleElement('#prevCpu', cpus[idx % cpus.length], { duration: 600 });
-            window.scrambleElement('#prevPing', pings[idx % pings.length], { duration: 600 });
-        }, 4200);
+            idx = (idx + 1) % cpus.length;
+            window.scrambleElement('#prevCpu', cpus[idx], { duration: 600 });
+        }, 4500);
     }
 
-    // 7. Submit button interactive feedback
+    // 8. Submit button interactive feedback
     const form = document.getElementById('loginForm');
     const submitBtn = document.getElementById('loginSubmitBtn');
     form?.addEventListener('submit', () => {
