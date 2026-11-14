@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\MonitoredSite;
+use App\Models\User;
 use App\Services\NginxService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,14 +12,19 @@ class MonitoringTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->actingAs(User::factory()->create());
+    }
+
     public function test_dashboard_page_loads_successfully(): void
     {
         $response = $this->get('/');
         $response->assertStatus(200);
-        $response->assertSee('STB Monitor');
-        $response->assertSee('Beban CPU');
-        $response->assertSee('RAM Memory');
-        $response->assertSee('Storage & Disk Load', false);
+        $response->assertSee('Monitor');
+        $response->assertSee('Penggunaan CPU');
+        $response->assertSee('Penyimpanan');
     }
 
     public function test_metrics_api_returns_system_telemetry(): void

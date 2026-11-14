@@ -31,8 +31,7 @@ class StbMonitorService
             'timestamp' => now()->toIso8601String(),
         ];
 
-        // Periodically cache recent points for live sparkline rendering
-        $this->recordMetricSnapshot($cpuInfo['usage_percent'], $ramInfo['usage_percent'], $ramInfo['used_mb'], $ramInfo['total_mb'], $diskInfo['usage_percent'], $diskIoInfo['read_kb_s'], $diskIoInfo['write_kb_s'], $tempInfo['celsius']);
+        $this->recordSnapshot($metrics);
 
         return $metrics;
     }
@@ -181,7 +180,7 @@ class StbMonitorService
      */
     public function getDiskMetrics(): array
     {
-        $rootPath = '/';
+        $rootPath = rtrim((string) config('monitor.host_root', '/'), '/') ?: '/';
         $totalBytes = @disk_total_space($rootPath) ?: (16 * 1024 * 1024 * 1024); // 16GB default STB eMMC
         $freeBytes = @disk_free_space($rootPath) ?: (9 * 1024 * 1024 * 1024);
         $usedBytes = max(0, $totalBytes - $freeBytes);
@@ -403,13 +402,15 @@ class StbMonitorService
      */
     public function getSystemInfo(): array
     {
-        $hostname = gethostname() ?: 'stb-server';
+        $hostname = config('monitor.hostname') ?: (gethostname() ?: 'server');
         $kernel = php_uname('r');
         $arch = php_uname('m');
 
         $os = PHP_OS;
-        if (is_readable('/etc/os-release')) {
-            $osRelease = file_get_contents('/etc/os-release');
+        $hostRoot = rtrim((string) config('monitor.host_root', '/'), '/');
+        $osFile = is_readable($hostRoot.'/etc/os-release') ? $hostRoot.'/etc/os-release' : '/etc/os-release';
+        if (is_readable($osFile)) {
+            $osRelease = file_get_contents($osFile);
             if (preg_match('/PRETTY_NAME="([^"]+)"/', $osRelease, $m)) {
                 $os = $m[1];
             }
@@ -417,7 +418,7 @@ class StbMonitorService
             $os = 'macOS '.php_uname('r').' (Development Host)';
         }
 
-        $model = 'ARM STB (Amlogic/Allwinner/Rockchip)';
+        $model = 'Linux Server';
         if (is_readable('/proc/device-tree/model')) {
             $model = trim(file_get_contents('/proc/device-tree/model'));
         } elseif (is_readable('/sys/firmware/devicetree/base/model')) {
@@ -452,33 +453,38 @@ class StbMonitorService
     }
 
     /**
-     * Record periodic snapshot for chart history.
+     * Simpan snapshot berkala untuk grafik riwayat (maks. 1 titik per 15 detik per server).
+     *
+     * @param  array<string, mixed>  $m
      */
-    private function recordMetricSnapshot(float $cpu, float $ramPercent, float $ramUsedMb, float $ramTotalMb, float $disk, float $readKb, float $writeKb, ?float $temp): void
+    public function recordSnapshot(array $m, ?int $serverId = null): void
     {
         try {
-            $last = SystemMetricLog::latest('id')->first();
-            if (! $last || now()->diffInSeconds($last->recorded_at) >= 15) {
-                SystemMetricLog::create([
-                    'cpu_usage_percent' => $cpu,
-                    'ram_usage_percent' => $ramPercent,
-                    'ram_used_mb' => $ramUsedMb,
-                    'ram_total_mb' => $ramTotalMb,
-                    'disk_usage_percent' => $disk,
-                    'disk_read_kb_s' => $readKb,
-                    'disk_write_kb_s' => $writeKb,
-                    'temperature_celsius' => $temp,
-                    'recorded_at' => now(),
-                ]);
+            $last = SystemMetricLog::where('server_id', $serverId)->latest('id')->first();
+            if ($last && now()->diffInSeconds($last->recorded_at, true) < 15) {
+                return;
+            }
 
-                // Keep only last 100 records to prevent bloating SQLite on STB
-                $count = SystemMetricLog::count();
-                if ($count > 120) {
-                    SystemMetricLog::orderBy('id', 'asc')->limit($count - 100)->delete();
-                }
+            SystemMetricLog::create([
+                'server_id' => $serverId,
+                'cpu_usage_percent' => $m['cpu']['usage_percent'] ?? 0,
+                'ram_usage_percent' => $m['ram']['usage_percent'] ?? 0,
+                'ram_used_mb' => $m['ram']['used_mb'] ?? 0,
+                'ram_total_mb' => $m['ram']['total_mb'] ?? 0,
+                'disk_usage_percent' => $m['disk']['usage_percent'] ?? 0,
+                'disk_read_kb_s' => $m['disk_io']['read_kb_s'] ?? 0,
+                'disk_write_kb_s' => $m['disk_io']['write_kb_s'] ?? 0,
+                'temperature_celsius' => $m['temperature']['celsius'] ?? null,
+                'recorded_at' => now(),
+            ]);
+
+            // Simpan 1 jam terakhir saja (240 titik)
+            $cutoff = SystemMetricLog::where('server_id', $serverId)->orderByDesc('id')->skip(240)->value('id');
+            if ($cutoff) {
+                SystemMetricLog::where('server_id', $serverId)->where('id', '<=', $cutoff)->delete();
             }
         } catch (\Throwable $e) {
-            // Silently ignore if db lock or table is migrating
+            // Abaikan jika DB sedang terkunci / migrasi berjalan
         }
     }
 }

@@ -1,0 +1,29 @@
+# Agent + dashboard untuk server tambahan (mis. Server 2).
+#   1) cp .env.docker.example .env      -> isi APP_KEY, AGENT_TOKEN, ADMIN_*
+#   2) docker compose up -d --build
+# Dashboard: http://IP-SERVER:8080   |   Agent: http://IP-SERVER:8080/api/agent/*
+services:
+  monitor:
+    build: .
+    image: monitor:latest
+    container_name: monitor
+    restart: unless-stopped
+    ports:
+      - "${MONITOR_PORT:-8080}:8080"
+    env_file: .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      MONITOR_HOST_ROOT: /host
+      # Agar perintah di terminal berjalan di host (bukan di dalam container), isi TERMINAL_SSH_* di .env.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - monitor-data:/data
+      # Host root (read-only) supaya disk, OS, dan hostname yang terbaca adalah milik server, bukan container.
+      - /:/host:ro
+      # Opsional: kunci SSH untuk terminal host (lihat DEPLOY.md)
+      # - ./ssh:/ssh:ro
+
+volumes:
+  monitor-data:

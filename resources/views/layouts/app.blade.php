@@ -1,100 +1,90 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'STB Monitor & Web Active Health') • Server Dashboard</title>
-    
-    <!-- Google Fonts -->
+    <title>@yield('title', 'Dashboard') · Monitor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- ApexCharts -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-
-    <!-- Vite Assets (Anime.js & Motion) -->
-    @vite(['resources/js/app.js'])
-
-    <!-- Custom Modern Styles (with automatic cache busting for Cloudflare & Browsers) -->
-    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}?v={{ file_exists(public_path('css/dashboard.css')) ? filemtime(public_path('css/dashboard.css')) : time() }}">
-
-    @stack('styles')
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
+    @stack('head')
 </head>
 <body>
-    <!-- Background Ambient Glow -->
-    <div class="bg-ambient">
-        <div class="bg-blob blob-1"></div>
-        <div class="bg-blob blob-2"></div>
-        <div class="bg-blob blob-3"></div>
-    </div>
+@php
+    $nav = [
+        'Platform' => [
+            ['dashboard', 'Dashboard', 'dashboard'],
+            ['websites', 'Websites', 'globe'],
+            ['backups', 'Backups', 'archive'],
+            ['terminal', 'Terminal', 'terminal'],
+        ],
+        'System' => [
+            ['servers', 'Servers', 'server'],
+        ],
+    ];
+@endphp
+<div class="app">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark">M</div>
+            <div class="brand-name">Monitor</div>
+        </div>
 
-    <!-- Toast Notification Container (Floating Top-Right) -->
-    <div id="toastContainer" class="toast-container" style="position: fixed; top: 24px; right: 24px; z-index: 99999999; display: flex; flex-direction: column; gap: 12px; pointer-events: none;"></div>
+        <nav class="nav">
+            @foreach($nav as $label => $items)
+                <div class="nav-label">{{ $label }}</div>
+                @foreach($items as [$route, $text, $icon])
+                    <a href="{{ route($route) }}" class="{{ request()->routeIs($route) ? 'active' : '' }}">
+                        @icon($icon, 18)<span>{{ $text }}</span>
+                    </a>
+                @endforeach
+            @endforeach
+        </nav>
 
-    <!-- Main Content -->
-    @yield('content')
-
-    <!-- Scripts -->
-    <script>
-        // Lucide Icons Auto Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.lucide) {
-                window.lucide.createIcons();
-            }
-        });
-
-        // Global Toast Notification Helper
-        window.showToast = function(message, type = 'success', title = null) {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
-            const toast = document.createElement('div');
-            toast.className = `toast-item ${type}`;
-            const icon = type === 'success' ? 'check-circle-2' : (type === 'error' ? 'alert-octagon' : 'info');
-            const defaultTitle = type === 'success' ? 'Berhasil' : (type === 'error' ? 'Peringatan / Gagal' : 'Informasi');
-            const displayTitle = title || defaultTitle;
-            
-            toast.innerHTML = `
-                <div class="toast-content">
-                    <i data-lucide="${icon}" style="width: 22px; height: 22px; flex-shrink: 0; color: ${type === 'success' ? '#10b981' : (type === 'error' ? '#f43f5e' : '#00f0ff')};"></i>
-                    <div>
-                        <div style="font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; font-weight: 700;">${displayTitle}</div>
-                        <div style="font-size: 0.88rem; font-weight: 500; color: #ffffff; margin-top: 2px;">${message}</div>
-                    </div>
+        <div class="sidebar-foot">
+            <div class="user-row">
+                <div class="avatar">{{ \Illuminate\Support\Str::substr(auth()->user()->name, 0, 1) }}</div>
+                <div class="user-meta">
+                    <b>{{ auth()->user()->name }}</b>
+                    <span>{{ auth()->user()->email }}</span>
                 </div>
-                <button class="toast-close-btn" onclick="this.parentElement.remove()" title="Tutup">
-                    <i data-lucide="x" style="width: 15px; height: 15px;"></i>
-                </button>
-            `;
-            container.appendChild(toast);
-            if (window.lucide) window.lucide.createIcons({ root: toast });
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(60px) scale(0.9)';
-                setTimeout(() => toast.remove(), 300);
-            }, 4500);
-        };
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="btn btn-icon" title="Keluar" type="submit">@icon('logout', 17)</button>
+                </form>
+            </div>
+        </div>
+    </aside>
 
-        // Theme Toggle (Dark / Light)
-        window.toggleTheme = function() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'dark';
-            const next = current === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('stb_theme', next);
-            if (window.onThemeChanged) window.onThemeChanged(next);
-        };
+    <main class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="btn btn-icon menu-btn" type="button" onclick="document.getElementById('sidebar').classList.toggle('open')">@icon('menu', 20)</button>
+                <h1 class="page-title">@yield('heading', 'Dashboard')</h1>
+                @hasSection('server-switch')
+                    <div class="select">
+                        <select onchange="location.href='/servers/' + this.value + '/select'" aria-label="Pilih server">
+                            @foreach($servers as $s)
+                                <option value="{{ $s->id }}" @selected($currentServer && $currentServer->id === $s->id)>{{ $s->name }}</option>
+                            @endforeach
+                        </select>
+                        @icon('chevron', 14)
+                    </div>
+                @endif
+            </div>
+            <div class="topbar-right">@yield('actions')</div>
+        </header>
 
-        // Restore saved theme
-        const savedTheme = localStorage.getItem('stb_theme');
-        if (savedTheme) {
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        }
-    </script>
-    @stack('scripts')
+        @yield('content')
+    </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>window.ICONS = @json($iconSet);</script>
+<script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
+@stack('scripts')
 </body>
 </html>

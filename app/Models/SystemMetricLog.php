@@ -21,6 +21,7 @@ class SystemMetricLog extends Model
         'disk_write_kb_s',
         'temperature_celsius',
         'recorded_at',
+        'server_id',
     ];
 
     protected function casts(): array

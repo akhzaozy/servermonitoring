@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\MonitoredSite;
 use App\Services\WebHealthService;
+use App\Support\SitePayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,27 +20,7 @@ class SiteApiController extends Controller
      */
     public function index(): JsonResponse
     {
-        $sites = MonitoredSite::orderBy('id', 'asc')->get()->map(function (MonitoredSite $site) {
-            $stats = $this->webHealth->getSiteUptimeStats($site);
-
-            return [
-                'id' => $site->id,
-                'name' => $site->name,
-                'url' => $site->url,
-                'stack_type' => $site->stack_type,
-                'port' => $site->port,
-                'is_active' => $site->is_active,
-                'is_online' => $site->is_online,
-                'last_status_code' => $site->last_status_code,
-                'last_response_time_ms' => $site->last_response_time_ms,
-                'last_checked_at' => $site->last_checked_at?->diffForHumans() ?? 'Belum dicek',
-                'last_error' => $site->last_error,
-                'ssl_valid' => $site->ssl_valid,
-                'ssl_expires_at' => $site->ssl_expires_at?->format('d M Y'),
-                'uptime_percentage' => $stats['uptime_percentage'],
-                'history_bars' => $stats['history_bars'],
-            ];
-        });
+        $sites = SitePayload::all($this->webHealth);
 
         return response()->json($sites);
     }

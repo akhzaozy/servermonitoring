@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Server;
 use App\Models\SystemMetricLog;
+use App\Services\AgentClient;
 use App\Services\NginxService;
 use App\Services\StbMonitorService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SystemApiController extends Controller
 {
@@ -16,15 +19,28 @@ class SystemApiController extends Controller
     ) {}
 
     /**
-     * Get real-time system metrics (CPU, RAM, Disk, Disk IO, Temp).
+     * Metrik real-time + riwayat untuk server terpilih (?server=ID, default: lokal).
      */
-    public function getMetrics(): JsonResponse
+    public function getMetrics(Request $request, AgentClient $agent): JsonResponse
     {
-        $metrics = $this->stbMonitor->getSystemMetrics();
+        $server = Server::resolve($request->integer('server') ?: null);
 
-        // Get last 20 history points for sparkline charts
-        $history = SystemMetricLog::latest('id')
-            ->take(20)
+        if ($server->isLocal()) {
+            $metrics = $this->stbMonitor->getSystemMetrics();
+            $serverId = null;
+        } else {
+            try {
+                $metrics = $agent->metrics($server);
+            } catch (\Throwable $e) {
+                return response()->json(['online' => false, 'message' => $e->getMessage()], 502);
+            }
+            $this->stbMonitor->recordSnapshot($metrics, $server->id);
+            $serverId = $server->id;
+        }
+
+        $metrics['history'] = SystemMetricLog::where('server_id', $serverId)
+            ->latest('id')
+            ->take(60)
             ->get()
             ->reverse()
             ->values()
@@ -32,12 +48,14 @@ class SystemApiController extends Controller
                 'time' => $log->recorded_at->format('H:i:s'),
                 'cpu' => $log->cpu_usage_percent,
                 'ram' => $log->ram_usage_percent,
+                'disk' => $log->disk_usage_percent,
                 'disk_read' => $log->disk_read_kb_s,
                 'disk_write' => $log->disk_write_kb_s,
                 'temp' => $log->temperature_celsius,
             ]);
 
-        $metrics['history'] = $history;
+        $metrics['online'] = true;
+        $metrics['server'] = ['id' => $server->id, 'name' => $server->name, 'type' => $server->type];
 
         return response()->json($metrics);
     }
